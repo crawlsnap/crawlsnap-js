@@ -1,8 +1,9 @@
 name: release
 
 # Build and publish to npm when a GitHub Release is published.
-# Uses npm provenance via OIDC — no long-lived npm token stored in the repo
-# (configure a trusted publisher / OIDC for the package on npmjs.com).
+# Uses npm Trusted Publishing (OIDC) — no long-lived npm token stored in the
+# repo. Configure the trusted publisher for the `crawlsnap` package on
+# npmjs.com (Settings → Trusted Publisher → this repo + this workflow file).
 on:
   release:
     types: [published]
@@ -22,10 +23,12 @@ jobs:
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
+      # Trusted Publishing (OIDC) requires npm >= 11.5.1; setup-node@node20
+      # ships npm 10, so upgrade before publishing.
+      - run: npm install -g npm@latest
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # No NODE_AUTH_TOKEN: auth is the OIDC token exchange (id-token: write).
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
