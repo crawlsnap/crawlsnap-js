@@ -278,21 +278,16 @@ export interface components {
             reputation?: number;
             threat_names?: string[];
             tags?: string[];
-            categories?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis_stats?: {
-                [key: string]: unknown;
-            };
-            url_content?: {
-                [key: string]: unknown;
-            };
-            network?: {
-                [key: string]: unknown;
-            };
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            categories?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis_stats?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            url_content?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            network?: unknown;
         };
         IocHashScanData: {
             /** @description SHA-256 of the queried hash (resolved upstream when md5/sha1 supplied). */
@@ -307,9 +302,8 @@ export interface components {
             type_description?: string;
             meaningful_name?: string;
             authentihash?: string;
-            detectiteasy?: {
-                [key: string]: unknown;
-            };
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            detectiteasy?: unknown;
             trid?: {
                 [key: string]: unknown;
             }[];
@@ -337,33 +331,24 @@ export interface components {
             contacted_domains?: {
                 [key: string]: unknown;
             }[];
-            sigma?: {
-                [key: string]: unknown;
-            };
-            sigma_stats?: {
-                [key: string]: unknown;
-            };
-            classification?: {
-                [key: string]: unknown;
-            };
-            pe_info?: {
-                [key: string]: unknown;
-            };
-            signature?: {
-                [key: string]: unknown;
-            };
-            votes_result?: {
-                [key: string]: unknown;
-            };
-            sandbox_verdicts?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis_stats?: {
-                [key: string]: unknown;
-            };
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            sigma?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            sigma_stats?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            classification?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            pe_info?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            signature?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            votes_result?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            sandbox_verdicts?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis_stats?: unknown;
         };
         IocIpScanData: {
             hash_id: string;
@@ -386,15 +371,12 @@ export interface components {
             modification_date?: number;
             /** Format: int64 */
             analysis_date?: number;
-            votes_result?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis_stats?: {
-                [key: string]: unknown;
-            };
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            votes_result?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis_stats?: unknown;
             referrerFiles?: {
                 [key: string]: unknown;
             }[];
@@ -426,27 +408,21 @@ export interface components {
             registrar?: string;
             /** Format: int64 */
             analysis_date?: number;
-            votes_result?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis?: {
-                [key: string]: unknown;
-            };
-            security_vendor_analysis_stats?: {
-                [key: string]: unknown;
-            };
-            categories?: {
-                [key: string]: unknown;
-            };
-            popularity_ranks?: {
-                [key: string]: unknown;
-            };
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            votes_result?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            security_vendor_analysis_stats?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            categories?: unknown;
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            popularity_ranks?: unknown;
             dns_records?: {
                 [key: string]: unknown;
             }[];
-            http_certificate?: {
-                [key: string]: unknown;
-            };
+            /** @description Opaque upstream pass-through; shape varies (object/array/scalar), so it is typed as free-form. */
+            http_certificate?: unknown;
             referrerFiles?: {
                 [key: string]: unknown;
             }[];
