@@ -1,0 +1,62 @@
+{
+  "name": "crawlsnap",
+  "version": "0.1.0",
+  "description": "Official JavaScript/TypeScript SDK for CrawlSnap — the data intelligence API platform",
+  "keywords": [
+    "crawlsnap",
+    "data-intelligence",
+    "sdk",
+    "api-client",
+    "ioc",
+    "security"
+  ],
+  "homepage": "https://crawlsnap.com",
+  "license": "MIT",
+  "author": "CrawlSnap <support@crawlsnap.com>",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "regenerate": "./scripts/regenerate.sh",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "openapi-typescript": "^7.13.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crawlsnap/crawlsnap-js.git"
+  }
+}
