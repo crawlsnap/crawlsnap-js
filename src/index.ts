@@ -17,7 +17,7 @@
  */
 export { CrawlSnap } from "./client";
 export type { CrawlSnapOptions, RequestOptions } from "./client";
-export { VectorSnap, PulseSnap, SubdoSnap } from "./resources";
+export { VectorSnap, PulseSnap, SubdoSnap, SportSnap } from "./resources";
 export { VERSION } from "./version";
 
 export {
@@ -46,4 +46,10 @@ export type {
   PulseIpScanData,
   PulseDomainScanData,
   SubdoSnapScanData,
+  ChannelData,
+  ChannelScheduleData,
+  MatchData,
+  MatchStatus,
+  CountryChannelsData,
+  DailyScheduleData,
 } from "./types";

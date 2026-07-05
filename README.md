@@ -80,6 +80,7 @@ console.log(ip.as_owner, domain.reputation);
 | `vectorSnap` | `url` · `hash` · `ip` · `domain` | reputation, detections, categories, relationships |
 | `pulseSnap`  | `url` · `hash` · `ip` · `domain` | threat-intelligence pulse (and sandbox) summary |
 | `subdoSnap`  | `scan` · `scanIter` | enumerated subdomains (paginated) |
+| `sportSnap`  | `channel` · `channelSchedule` · `match` · `countryChannels` · `dailySchedule` | live football TV listings: channels, schedules, match details |
 
 ```ts
 const url    = await client.vectorSnap.url("https://example.com");
@@ -87,10 +88,24 @@ const file   = await client.vectorSnap.hash("44d88612fea8a8f36de82e1278abb02f");
 const domain = await client.vectorSnap.domain("google.com");
 
 const pulse  = await client.pulseSnap.ip("8.8.8.8");
+
+const channel  = await client.sportSnap.channel("bein-connect-turkey");
+const schedule = await client.sportSnap.channelSchedule("bein-connect-turkey");
+const match    = await client.sportSnap.match(5542814);
+const channels = await client.sportSnap.countryChannels("turkey");
+const day      = await client.sportSnap.dailySchedule("2026-07-05"); // or a Date
 ```
 
-Every method takes the indicator as the first argument and an optional per-call
-options object (`{ signal, timeout, maxRetries, rawResponse }`).
+Every method takes its lookup value as the first argument and an optional
+per-call options object (`{ signal, timeout, maxRetries, rawResponse }`).
+
+`sportSnap` covers live football (soccer) TV listings: TV channel metadata and
+broadcast rights, channel broadcast schedules, match details with per-country
+broadcast coverage (score, events, statistics, and lineups for finished
+matches), country channel directories, and daily schedules grouped by
+competition. `match.status` is `scheduled`, `live`, or `finished` and
+discriminates how much of the payload is populated. Match ids are discovered
+via `dailySchedule` and `channelSchedule` entries.
 
 ## API versioning
 

@@ -4,7 +4,7 @@
  * `CrawlSnap` owns a `fetch`, applies Bearer auth, retries transient failures
  * with exponential backoff, unwraps the `BaseResponse` envelope, and throws
  * typed errors. Resource groups are exposed as properties:
- * `client.vectorSnap`, `client.pulseSnap`, `client.subdoSnap`.
+ * `client.vectorSnap`, `client.pulseSnap`, `client.subdoSnap`, `client.sportSnap`.
  *
  * JavaScript is async-by-default, so there is a single client (no sync/async
  * twin): every method returns a `Promise`. Use `Promise.all` for concurrency.
@@ -20,7 +20,7 @@ import {
   sleep,
 } from "./base";
 import { APIConnectionError, APITimeoutError, CrawlSnapError } from "./errors";
-import { PulseSnap, SubdoSnap, VectorSnap } from "./resources";
+import { PulseSnap, SportSnap, SubdoSnap, VectorSnap } from "./resources";
 import type { RawResponse } from "./types";
 
 export interface CrawlSnapOptions {
@@ -77,6 +77,7 @@ export class CrawlSnap {
   readonly vectorSnap: VectorSnap;
   readonly pulseSnap: PulseSnap;
   readonly subdoSnap: SubdoSnap;
+  readonly sportSnap: SportSnap;
 
   constructor(options: CrawlSnapOptions = {}) {
     const apiKey = options.apiKey ?? env("CRAWLSNAP_API_KEY");
@@ -105,6 +106,7 @@ export class CrawlSnap {
     this.vectorSnap = new VectorSnap(this);
     this.pulseSnap = new PulseSnap(this);
     this.subdoSnap = new SubdoSnap(this);
+    this.sportSnap = new SportSnap(this);
   }
 
   private buildUrl(path: string, params: Record<string, unknown>): string {

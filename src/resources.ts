@@ -1,6 +1,6 @@
 /**
- * Resource groups exposed on the client: `vectorSnap`, `pulseSnap`, `subdoSnap`.
- * Each method submits one indicator and resolves to the typed enrichment payload
+ * Resource groups exposed on the client: `vectorSnap`, `pulseSnap`, `subdoSnap`,
+ * `sportSnap`. Each method submits one lookup and resolves to the typed payload
  * (the unwrapped `data`), or throws a typed error.
  *
  * Per-API versioning (the version is data, not a class hierarchy)
@@ -27,10 +27,15 @@
  */
 import type { CrawlSnap, RequestOptions } from "./client";
 import type {
+  ChannelData,
+  ChannelScheduleData,
+  CountryChannelsData,
+  DailyScheduleData,
   IocDomainScanData,
   IocHashScanData,
   IocIpScanData,
   IocUrlScanData,
+  MatchData,
   PulseDomainScanData,
   PulseHashScanData,
   PulseIpScanData,
@@ -186,5 +191,100 @@ export class SubdoSnap extends Resource {
       cursor = page.cursor || undefined;
       if (!cursor) break;
     }
+  }
+}
+
+// --------------------------------------------------------------------------
+// SportSnap — live football (soccer) TV listings.
+// --------------------------------------------------------------------------
+
+/** Renders a schedule date as `YYYY-MM-DD` (accepts a string or a Date, in UTC). */
+function formatScheduleDate(date: string | Date): string {
+  return date instanceof Date ? date.toISOString().slice(0, 10) : date;
+}
+
+/**
+ * Live football (soccer) TV listings: channel metadata and broadcast
+ * schedules, match details with per-country coverage (score, events,
+ * statistics, and lineups for finished matches), country channel directories,
+ * and daily schedules.
+ */
+export class SportSnap extends Resource {
+  /** Pin this product explicitly to v1; other products are unaffected. */
+  get v1(): SportSnap {
+    return this.pinned("v1");
+  }
+
+  /** TV channel metadata and competition broadcast rights. */
+  channel(slug: string, opts?: DataOptions): Promise<ChannelData>;
+  channel(slug: string, opts: RawOptions): Promise<RawResponse<ChannelData>>;
+  channel(slug: string, opts?: RequestOptions): Promise<ChannelData | RawResponse<ChannelData>> {
+    return this.client.request<ChannelData>(
+      `/${this.version}/sport-snap/channels/${encodeURIComponent(slug)}`,
+      {},
+      opts,
+    );
+  }
+
+  /** Upcoming broadcast listings for a channel; `entries` may be empty. */
+  channelSchedule(slug: string, opts?: DataOptions): Promise<ChannelScheduleData>;
+  channelSchedule(slug: string, opts: RawOptions): Promise<RawResponse<ChannelScheduleData>>;
+  channelSchedule(
+    slug: string,
+    opts?: RequestOptions,
+  ): Promise<ChannelScheduleData | RawResponse<ChannelScheduleData>> {
+    return this.client.request<ChannelScheduleData>(
+      `/${this.version}/sport-snap/channels/${encodeURIComponent(slug)}/schedule`,
+      {},
+      opts,
+    );
+  }
+
+  /**
+   * Match details, per-country broadcast coverage, and result data. `status`
+   * discriminates the payload: `scheduled` carries meta + broadcasts only;
+   * `live` and `finished` add score, events, statistics, and lineups as
+   * available. Match ids are discovered via {@link dailySchedule} and
+   * {@link channelSchedule} entries.
+   */
+  match(id: number, opts?: DataOptions): Promise<MatchData>;
+  match(id: number, opts: RawOptions): Promise<RawResponse<MatchData>>;
+  match(id: number, opts?: RequestOptions): Promise<MatchData | RawResponse<MatchData>> {
+    return this.client.request<MatchData>(
+      `/${this.version}/sport-snap/matches/${Math.trunc(id)}`,
+      {},
+      opts,
+    );
+  }
+
+  /** TV channels known for a country (slugified name, e.g. `turkey`). */
+  countryChannels(country: string, opts?: DataOptions): Promise<CountryChannelsData>;
+  countryChannels(country: string, opts: RawOptions): Promise<RawResponse<CountryChannelsData>>;
+  countryChannels(
+    country: string,
+    opts?: RequestOptions,
+  ): Promise<CountryChannelsData | RawResponse<CountryChannelsData>> {
+    return this.client.request<CountryChannelsData>(
+      `/${this.version}/sport-snap/countries/${encodeURIComponent(country)}/channels`,
+      {},
+      opts,
+    );
+  }
+
+  /**
+   * Daily broadcast schedule grouped by competition. Accepts `YYYY-MM-DD` or a
+   * `Date` (formatted in UTC).
+   */
+  dailySchedule(date: string | Date, opts?: DataOptions): Promise<DailyScheduleData>;
+  dailySchedule(date: string | Date, opts: RawOptions): Promise<RawResponse<DailyScheduleData>>;
+  dailySchedule(
+    date: string | Date,
+    opts?: RequestOptions,
+  ): Promise<DailyScheduleData | RawResponse<DailyScheduleData>> {
+    return this.client.request<DailyScheduleData>(
+      `/${this.version}/sport-snap/schedules/${encodeURIComponent(formatScheduleDate(date))}`,
+      {},
+      opts,
+    );
   }
 }

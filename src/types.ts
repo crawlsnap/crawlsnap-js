@@ -28,6 +28,14 @@ export type SubdoSnapScanData = Schemas["SubdoSnapScanData"];
 /** A single enumerated subdomain entry, as yielded by `subdoSnap.scanIter`. */
 export type Subdomain = NonNullable<SubdoSnapScanData["subdomains"]>[number];
 
+export type ChannelData = Schemas["ChannelData"];
+export type ChannelScheduleData = Schemas["ChannelScheduleData"];
+export type MatchData = Schemas["MatchData"];
+export type CountryChannelsData = Schemas["CountryChannelsData"];
+export type DailyScheduleData = Schemas["DailyScheduleData"];
+/** Match lifecycle discriminator: `scheduled`, `live`, or `finished`. */
+export type MatchStatus = Schemas["MatchStatus"];
+
 /** The response envelope, as returned when a call is made with `rawResponse: true`. */
 export interface RawResponse<T = unknown> {
   statusCode: number;

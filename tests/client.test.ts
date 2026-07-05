@@ -62,6 +62,72 @@ function makeFetch() {
       }
       return ok({ hash_id: "h", search_type: "domain", subdomains: [{ subdomain: "b.example.com" }], cursor: "", count: 2 });
     }
+    if (path === "/v1/sport-snap/channels/bein-connect-turkey") {
+      return ok({
+        slug: "bein-connect-turkey",
+        name: "beIN CONNECT Turkey",
+        country: "Turkey",
+        broadcast_rights: [{ competition: "England - Premier League", year_start: 2024, year_end: 2027 }],
+        updated_at: "2026-07-05T10:00:00Z",
+      });
+    }
+    if (path === "/v1/sport-snap/channels/bein-connect-turkey/schedule") {
+      return ok({
+        slug: "bein-connect-turkey",
+        name: "beIN CONNECT Turkey",
+        entries: [{
+          date: "2026-07-06",
+          kickoff_utc: "2026-07-06T19:00:00Z",
+          match_id: 5542814,
+          match_title: "Brazil vs Norway",
+          competition: "Friendly",
+        }],
+        updated_at: "2026-07-05T10:00:00Z",
+      });
+    }
+    if (path === "/v1/sport-snap/matches/5542814") {
+      return ok({
+        id: 5542814,
+        status: "finished",
+        competition: { name: "Friendly" },
+        home_team: { name: "Brazil" },
+        away_team: { name: "Norway" },
+        score: { home: 2, away: 1 },
+        events: [],
+        stats: [],
+        broadcasts: [{
+          country: "Turkey",
+          country_slug: "turkey",
+          channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey" }],
+        }],
+        updated_at: "2026-07-05T10:00:00Z",
+      });
+    }
+    if (path === "/v1/sport-snap/matches/404") return err(404, "Unknown match id");
+    if (path === "/v1/sport-snap/countries/turkey/channels") {
+      return ok({
+        country: "Turkey",
+        country_slug: "turkey",
+        channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey", last_seen: "2026-07-05T10:00:00Z" }],
+        updated_at: "2026-07-05T10:00:00Z",
+      });
+    }
+    if (path === "/v1/sport-snap/schedules/2026-07-05") {
+      return ok({
+        date: "2026-07-05",
+        competitions: [{
+          competition: "Friendly",
+          matches: [{
+            id: 5542814,
+            title: "Brazil vs Norway",
+            status: "scheduled",
+            kickoff_utc: "2026-07-06T19:00:00Z",
+            channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey" }],
+          }],
+        }],
+        updated_at: "2026-07-05T10:00:00Z",
+      });
+    }
     return jsonResponse(500, { data: null, is_success: false, message: `unexpected ${path}`, response_code: 500 });
   };
   return { fetchImpl, state };
@@ -169,5 +235,60 @@ describe("CrawlSnap facade", () => {
     controller.abort(new Error("cancelled"));
     await expect(promise).rejects.toThrow("cancelled");
     expect(calls).toBe(1); // not retried
+  });
+});
+
+describe("SportSnap", () => {
+  it("returns typed channel data", async () => {
+    const { client } = makeClient();
+    const ch = await client.sportSnap.channel("bein-connect-turkey");
+    expect(ch.slug).toBe("bein-connect-turkey");
+    expect(ch.broadcast_rights[0]?.competition).toBe("England - Premier League");
+    expect(ch.broadcast_rights[0]?.year_end).toBe(2027);
+  });
+
+  it("returns a channel schedule with match ids", async () => {
+    const { client } = makeClient();
+    const sched = await client.sportSnap.channelSchedule("bein-connect-turkey");
+    expect(sched.entries).toHaveLength(1);
+    expect(sched.entries[0]?.match_id).toBe(5542814);
+    expect(sched.entries[0]?.match_title).toBe("Brazil vs Norway");
+  });
+
+  it("returns match details with score and broadcasts", async () => {
+    const { client } = makeClient();
+    const match = await client.sportSnap.match(5542814);
+    expect(match.status).toBe("finished");
+    expect(match.score?.home).toBe(2);
+    expect(match.score?.away).toBe(1);
+    expect(match.broadcasts[0]?.country_slug).toBe("turkey");
+    expect(match.broadcasts[0]?.channels[0]?.slug).toBe("bein-connect-turkey");
+  });
+
+  it("throws NotFoundError for an unknown match id", async () => {
+    const { client } = makeClient();
+    await expect(client.sportSnap.match(404)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("returns country channels", async () => {
+    const { client } = makeClient();
+    const cc = await client.sportSnap.countryChannels("turkey");
+    expect(cc.country).toBe("Turkey");
+    expect(cc.channels[0]?.slug).toBe("bein-connect-turkey");
+  });
+
+  it("accepts a Date for dailySchedule and formats it as YYYY-MM-DD (UTC)", async () => {
+    const { client } = makeClient();
+    const viaDate = await client.sportSnap.dailySchedule(new Date("2026-07-05T15:04:05Z"));
+    expect(viaDate.competitions[0]?.competition).toBe("Friendly");
+    const viaString = await client.sportSnap.dailySchedule("2026-07-05");
+    expect(viaString.competitions[0]?.matches[0]?.title).toBe("Brazil vs Norway");
+  });
+
+  it("pins v1 and caches the pinned instance", async () => {
+    const { client } = makeClient();
+    expect(client.sportSnap.v1).toBe(client.sportSnap.v1);
+    const ch = await client.sportSnap.v1.channel("bein-connect-turkey");
+    expect(ch.slug).toBe("bein-connect-turkey");
   });
 });

@@ -193,6 +193,123 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sport-snap/channels/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * TV channel metadata and broadcast rights.
+         * @description Returns channel metadata (name, country, about, website) and the
+         *     channel's competition broadcast rights.
+         */
+        get: operations["sportSnapChannel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/channels/{slug}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Broadcast schedule for a TV channel.
+         * @description Returns the channel's upcoming broadcast listings (day, kickoff,
+         *     match, competition). `data.entries` is an empty array when the
+         *     channel currently has no upcoming listings — that is a valid 200,
+         *     not a 404.
+         */
+        get: operations["sportSnapChannelSchedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/matches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match details, per-country broadcast coverage, and result data.
+         * @description Returns match details keyed by the numeric match id. `data.status`
+         *     discriminates the payload: `scheduled` carries meta + broadcasts
+         *     only; `live` and `finished` additionally carry score, events,
+         *     statistics, and lineups as available.
+         *
+         *     Match ids are discovered via daily schedules
+         *     (`/v1/sport-snap/schedules/{date}`) and channel schedules; an id the
+         *     service has never seen triggers a bounded resolution pass before a
+         *     404 is returned.
+         */
+        get: operations["sportSnapMatch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/countries/{country}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * TV channels known for a country.
+         * @description Returns the TV channels known for the country, aggregated from
+         *     crawled match coverage and channel data. The directory accretes as
+         *     matches and schedules are fetched; a 404 means no channels are known
+         *     for the country yet.
+         */
+        get: operations["sportSnapCountryChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/schedules/{date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily broadcast schedule grouped by competition.
+         * @description Returns the full broadcast schedule for the given date, grouped by
+         *     competition, with kickoff times normalized to UTC and per-match
+         *     channel listings.
+         */
+        get: operations["sportSnapDailySchedule"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -260,6 +377,21 @@ export interface components {
         };
         SubdoSnapScanResponse: components["schemas"]["BaseResponse"] & {
             data?: components["schemas"]["SubdoSnapScanData"];
+        };
+        SportSnapChannelResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["ChannelData"];
+        };
+        SportSnapChannelScheduleResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["ChannelScheduleData"];
+        };
+        SportSnapMatchResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["MatchData"];
+        };
+        SportSnapCountryChannelsResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["CountryChannelsData"];
+        };
+        SportSnapDailyScheduleResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["DailyScheduleData"];
         };
         IocUrlScanData: {
             /** @description SHA-256 of the queried URL. */
@@ -511,6 +643,216 @@ export interface components {
              */
             count?: number;
         };
+        BroadcastRight: {
+            /** @description Competition display name, e.g. "England - Premier League". */
+            competition: string;
+            /**
+             * Format: int32
+             * @description First year of the rights window, e.g. 2024.
+             */
+            year_start: number;
+            /**
+             * Format: int32
+             * @description Last year of the rights window; null when open-ended or unspecified.
+             */
+            year_end?: number | null;
+        };
+        ChannelData: {
+            slug: string;
+            /** @description Channel display name, e.g. "beIN CONNECT Turkey". */
+            name: string;
+            /** @description Country the channel belongs to, when the source states it. */
+            country?: string | null;
+            /** @description Free-text channel description from the source's About section. */
+            about?: string | null;
+            /**
+             * Format: uri
+             * @description The channel's own website, when linked.
+             */
+            website?: string | null;
+            broadcast_rights: components["schemas"]["BroadcastRight"][];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ChannelScheduleEntry: {
+            /**
+             * Format: date
+             * @description Listing day as rendered by the source (source-local calendar day).
+             */
+            date: string;
+            /**
+             * Format: date-time
+             * @description Kickoff normalized to UTC; null if the time could not be parsed.
+             */
+            kickoff_utc?: string | null;
+            /** @description Raw kickoff string as rendered by the source (debug/diagnostic aid). */
+            kickoff_local?: string | null;
+            /**
+             * Format: int64
+             * @description Numeric match id usable with `/api/v1/matches/{id}`; null when the source link carried no id.
+             */
+            match_id?: number | null;
+            /** @description E.g. "Brazil vs Norway". */
+            match_title: string;
+            home_team?: string | null;
+            away_team?: string | null;
+            /** @description Stage/round annotation, e.g. "Round of 16". */
+            round?: string | null;
+            competition: string;
+        };
+        ChannelScheduleData: {
+            slug: string;
+            name: string;
+            /** @description Empty array when the channel has no upcoming listings. */
+            entries: components["schemas"]["ChannelScheduleEntry"][];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
+         * @description Lifecycle discriminator. `scheduled`: meta + broadcasts only.
+         *     `live`: kickoff passed, no full-time marker yet. `finished`:
+         *     full-time result available (score/events/stats/lineups populated
+         *     as far as the source provides them).
+         * @enum {string}
+         */
+        MatchStatus: "scheduled" | "live" | "finished";
+        CompetitionRef: {
+            name: string;
+        };
+        TeamRef: {
+            name: string;
+        };
+        Score: {
+            /** Format: int32 */
+            home: number;
+            /** Format: int32 */
+            away: number;
+        };
+        MatchEvent: {
+            /** @description Match minute as rendered, including stoppage notation, e.g. "45+2", "120+5". */
+            minute: string;
+            /** @enum {string} */
+            team: "home" | "away";
+            /** @enum {string} */
+            type: "goal" | "own_goal" | "penalty_goal" | "yellow_card" | "red_card" | "substitution";
+            /** @description For substitutions this is the player coming ON. */
+            player: string;
+            /** @description Substitutions only; the player going off. */
+            player_out?: string | null;
+            /** @description Goals only; assisting player when credited. */
+            assist?: string | null;
+            /** @description Running score annotation after a goal, e.g. "1 - 2". */
+            running_score?: string | null;
+        };
+        MatchStat: {
+            /** @description Statistics section header, e.g. "Summary", "Shots", "Passes". */
+            section: string;
+            /** @description Stat row label, e.g. "On goal", "Possession". */
+            label: string;
+            /** @description Home value as rendered (may be a percentage like "52%"). */
+            home: string;
+            away: string;
+        };
+        Lineup: {
+            starting: string[];
+            substitutes: string[];
+            coach?: string | null;
+        };
+        Lineups: {
+            home: components["schemas"]["Lineup"];
+            away: components["schemas"]["Lineup"];
+        };
+        BroadcastChannel: {
+            name: string;
+            /** @description Channel slug usable with `/api/v1/channels/{slug}`; null when the source did not link the channel. */
+            slug?: string | null;
+        };
+        CountryBroadcast: {
+            /** @description Country display name, e.g. "United States". */
+            country: string;
+            /** @description Slugified country name usable with `/api/v1/countries/{country}/channels`. */
+            country_slug: string;
+            channels: components["schemas"]["BroadcastChannel"][];
+        };
+        MatchData: {
+            /** Format: int64 */
+            id: number;
+            status: components["schemas"]["MatchStatus"];
+            competition: components["schemas"]["CompetitionRef"];
+            round?: string | null;
+            home_team: components["schemas"]["TeamRef"];
+            away_team: components["schemas"]["TeamRef"];
+            /**
+             * Format: date-time
+             * @description Kickoff normalized to UTC; null if the time could not be parsed.
+             */
+            kickoff_utc?: string | null;
+            /** @description Raw kickoff string as rendered by the source (debug/diagnostic aid). */
+            kickoff_local?: string | null;
+            venue?: string | null;
+            score?: components["schemas"]["Score"] | null;
+            /** @description Empty for scheduled matches. */
+            events?: components["schemas"]["MatchEvent"][];
+            /** @description Empty for scheduled matches. */
+            stats?: components["schemas"]["MatchStat"][];
+            lineups?: components["schemas"]["Lineups"] | null;
+            /** @description Per-country broadcast coverage from the source's international coverage table. */
+            broadcasts: components["schemas"]["CountryBroadcast"][];
+            /**
+             * Format: uri
+             * @description Official highlights link for finished matches, when present.
+             */
+            highlights_url?: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        CountryChannel: {
+            name: string;
+            /** @description Channel slug usable with `/api/v1/channels/{slug}`; null when never linked by the source. */
+            slug?: string | null;
+            /**
+             * Format: date-time
+             * @description Last time this channel was observed for this country in crawled data.
+             */
+            last_seen: string;
+        };
+        CountryChannelsData: {
+            country: string;
+            country_slug: string;
+            channels: components["schemas"]["CountryChannel"][];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ScheduledMatch: {
+            /**
+             * Format: int64
+             * @description Numeric match id usable with `/api/v1/matches/{id}`; null when the source link carried no id.
+             */
+            id?: number | null;
+            /** @description E.g. "Belgium vs Senegal". */
+            title: string;
+            home_team?: string | null;
+            away_team?: string | null;
+            status: components["schemas"]["MatchStatus"];
+            score?: components["schemas"]["Score"] | null;
+            /** Format: date-time */
+            kickoff_utc?: string | null;
+            /** @description Raw kickoff string as rendered by the source (debug/diagnostic aid). */
+            kickoff_local?: string | null;
+            round?: string | null;
+            channels: components["schemas"]["BroadcastChannel"][];
+        };
+        CompetitionSchedule: {
+            competition: string;
+            matches: components["schemas"]["ScheduledMatch"][];
+        };
+        DailyScheduleData: {
+            /** Format: date */
+            date: string;
+            competitions: components["schemas"]["CompetitionSchedule"][];
+            /** Format: date-time */
+            updated_at: string;
+        };
     };
     responses: {
         /** @description Invalid input — malformed URL, hash, IP, or domain. */
@@ -576,6 +918,18 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
+        /**
+         * @description The upstream data source could not be parsed (and no cached copy was
+         *     available). Retry later.
+         */
+        BadGateway: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
         /** @description The upstream enrichment service was unavailable. */
         ServiceUnavailable: {
             headers: {
@@ -621,6 +975,26 @@ export interface components {
          *     response. Omit on the first request.
          */
         CursorParam: string;
+        /**
+         * @description TV channel slug, e.g. `bein-connect-turkey` or `fox-network`.
+         * @example bein-connect-turkey
+         */
+        ChannelSlugPathParam: string;
+        /**
+         * @description Stable numeric match id, e.g. `5542814`.
+         * @example 5542814
+         */
+        MatchIdPathParam: number;
+        /**
+         * @description Slugified country name, e.g. `turkey`, `united-states`.
+         * @example turkey
+         */
+        CountrySlugPathParam: string;
+        /**
+         * @description Schedule date in `YYYY-MM-DD`.
+         * @example 2026-07-05
+         */
+        DatePathParam: string;
     };
     requestBodies: never;
     headers: never;
@@ -944,6 +1318,185 @@ export interface operations {
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalServerError"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description TV channel slug, e.g. `bein-connect-turkey` or `fox-network`.
+                 * @example bein-connect-turkey
+                 */
+                slug: components["parameters"]["ChannelSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel metadata with broadcast rights. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapChannelResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapChannelSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description TV channel slug, e.g. `bein-connect-turkey` or `fox-network`.
+                 * @example bein-connect-turkey
+                 */
+                slug: components["parameters"]["ChannelSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel broadcast schedule. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapChannelScheduleResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapMatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Stable numeric match id, e.g. `5542814`.
+                 * @example 5542814
+                 */
+                id: components["parameters"]["MatchIdPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Match details with per-country broadcast coverage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapMatchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapCountryChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Slugified country name, e.g. `turkey`, `united-states`.
+                 * @example turkey
+                 */
+                country: components["parameters"]["CountrySlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channels known for the country. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapCountryChannelsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapDailySchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description Schedule date in `YYYY-MM-DD`.
+                 * @example 2026-07-05
+                 */
+                date: components["parameters"]["DatePathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Daily schedule for the given date. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapDailyScheduleResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
             503: components["responses"]["ServiceUnavailable"];
             504: components["responses"]["GatewayTimeout"];
         };
