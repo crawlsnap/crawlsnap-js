@@ -685,8 +685,10 @@ export interface components {
              * @description Kickoff normalized to UTC; null if the time could not be parsed.
              */
             kickoff_utc?: string | null;
-            /** @description Raw kickoff string as rendered by the source (debug/diagnostic aid). */
+            /** @description Kickoff clock in the source's rendering zone, cleaned of live/status markers (e.g. "4:00pm", "20:45"); null if the time could not be parsed. */
             kickoff_local?: string | null;
+            /** @description Raw time cell exactly as rendered by the source, including any live badge and status suffix (e.g. "Live+  4:00pm86'") — debug/diagnostic aid. */
+            kickoff_raw?: string | null;
             /**
              * Format: int64
              * @description Numeric match id usable with `/api/v1/matches/{id}`; null when the source link carried no id.
@@ -696,6 +698,8 @@ export interface components {
             match_title: string;
             home_team?: string | null;
             away_team?: string | null;
+            /** @description True when at least one side is an undecided knockout-bracket slot (the source renders placeholders like "W93" or "L101" until the pairing is known). */
+            is_placeholder: boolean;
             /** @description Stage/round annotation, e.g. "Round of 16". */
             round?: string | null;
             competition: string;
@@ -782,13 +786,17 @@ export interface components {
             round?: string | null;
             home_team: components["schemas"]["TeamRef"];
             away_team: components["schemas"]["TeamRef"];
+            /** @description True when at least one side is an undecided knockout-bracket slot (the source renders placeholders like "W93" or "L101" until the pairing is known). */
+            is_placeholder: boolean;
             /**
              * Format: date-time
              * @description Kickoff normalized to UTC; null if the time could not be parsed.
              */
             kickoff_utc?: string | null;
-            /** @description Raw kickoff string as rendered by the source (debug/diagnostic aid). */
+            /** @description Kickoff date+time in the source's rendering zone, cleaned of live/status markers (e.g. "Jul 5, 2026 16:00"); null if the time could not be parsed. */
             kickoff_local?: string | null;
+            /** @description Raw kickoff header exactly as rendered by the source — debug/diagnostic aid. */
+            kickoff_raw?: string | null;
             venue?: string | null;
             score?: components["schemas"]["Score"] | null;
             /** @description Empty for scheduled matches. */
@@ -833,12 +841,16 @@ export interface components {
             title: string;
             home_team?: string | null;
             away_team?: string | null;
+            /** @description True when at least one side is an undecided knockout-bracket slot (the source renders placeholders like "W93" or "L101" until the pairing is known). */
+            is_placeholder: boolean;
             status: components["schemas"]["MatchStatus"];
             score?: components["schemas"]["Score"] | null;
             /** Format: date-time */
             kickoff_utc?: string | null;
-            /** @description Raw kickoff string as rendered by the source (debug/diagnostic aid). */
+            /** @description Kickoff clock in the source's rendering zone, cleaned of live/status markers (e.g. "4:00pm", "20:45"); null if the time could not be parsed. */
             kickoff_local?: string | null;
+            /** @description Raw time cell exactly as rendered by the source, including any live badge and status suffix (e.g. "Live+  4:00pm86'") — debug/diagnostic aid. */
+            kickoff_raw?: string | null;
             round?: string | null;
             channels: components["schemas"]["BroadcastChannel"][];
         };

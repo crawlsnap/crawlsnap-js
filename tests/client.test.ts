@@ -81,6 +81,9 @@ function makeFetch() {
           match_id: 5542814,
           match_title: "Brazil vs Norway",
           competition: "Friendly",
+          is_placeholder: false,
+          kickoff_local: "10:00pm",
+          kickoff_raw: "10:00pm",
         }],
         updated_at: "2026-07-05T10:00:00Z",
       });
@@ -89,6 +92,7 @@ function makeFetch() {
       return ok({
         id: 5542814,
         status: "finished",
+        is_placeholder: false,
         competition: { name: "Friendly" },
         home_team: { name: "Brazil" },
         away_team: { name: "Norway" },
@@ -121,6 +125,7 @@ function makeFetch() {
             id: 5542814,
             title: "Brazil vs Norway",
             status: "scheduled",
+            is_placeholder: false,
             kickoff_utc: "2026-07-06T19:00:00Z",
             channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey" }],
           }],
@@ -253,6 +258,9 @@ describe("SportSnap", () => {
     expect(sched.entries).toHaveLength(1);
     expect(sched.entries[0]?.match_id).toBe(5542814);
     expect(sched.entries[0]?.match_title).toBe("Brazil vs Norway");
+    expect(sched.entries[0]?.is_placeholder).toBe(false);
+    expect(sched.entries[0]?.kickoff_local).toBe("10:00pm");
+    expect(sched.entries[0]?.kickoff_raw).toBe("10:00pm");
   });
 
   it("returns match details with score and broadcasts", async () => {
