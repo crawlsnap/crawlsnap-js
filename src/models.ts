@@ -193,7 +193,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sport-snap/channels/{slug}": {
+    "/v1/sport-snap/livescores": {
         parameters: {
             query?: never;
             header?: never;
@@ -201,11 +201,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * TV channel metadata and broadcast rights.
-         * @description Returns channel metadata (name, country, about, website) and the
-         *     channel's competition broadcast rights.
+         * Global live scores with in-match events.
+         * @description Returns the live-score board for every competition currently being
+         *     tracked: score line, match status (running minute, HT, FT, ...),
+         *     and structured in-match events (goals, cards, substitutions).
          */
-        get: operations["sportSnapChannel"];
+        get: operations["sportSnapLivescores"];
         put?: never;
         post?: never;
         delete?: never;
@@ -214,7 +215,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sport-snap/channels/{slug}/schedule": {
+    "/v1/sport-snap/matches": {
         parameters: {
             query?: never;
             header?: never;
@@ -222,13 +223,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Broadcast schedule for a TV channel.
-         * @description Returns the channel's upcoming broadcast listings (day, kickoff,
-         *     match, competition). `data.entries` is an empty array when the
-         *     channel currently has no upcoming listings — that is a valid 200,
-         *     not a 404.
+         * Upcoming and current fixtures grouped by competition.
+         * @description Returns every upcoming/current fixture grouped by competition, with
+         *     the broadcast channels available in the requested `iso_code` region.
+         *     `fixture_id` values feed the single-match endpoints.
          */
-        get: operations["sportSnapChannelSchedule"];
+        get: operations["sportSnapMatches"];
         put?: never;
         post?: never;
         delete?: never;
@@ -237,7 +237,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sport-snap/matches/{id}": {
+    "/v1/sport-snap/xmatches": {
         parameters: {
             query?: never;
             header?: never;
@@ -245,16 +245,33 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Match details, per-country broadcast coverage, and result data.
-         * @description Returns match details keyed by the numeric match id. `data.status`
-         *     discriminates the payload: `scheduled` carries meta + broadcasts
-         *     only; `live` and `finished` additionally carry score, events,
-         *     statistics, and lineups as available.
-         *
-         *     Match ids are discovered via daily schedules
-         *     (`/v1/sport-snap/schedules/{date}`) and channel schedules; an id the
-         *     service has never seen triggers a bounded resolution pass before a
-         *     404 is returned.
+         * Extended fixture list with per-locale team-name translations.
+         * @description Extended variant of the fixture list: adds `*_translations` maps for
+         *     team names, omits per-fixture channels. `timestamp` is a unix-second
+         *     watermark for incremental fetches (`0` returns everything).
+         */
+        get: operations["sportSnapMatchesExtended"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/match/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Single match detail — lineups, events, stats, broadcasts.
+         * @description Returns the full match view keyed by the numeric match id
+         *     (`fixture_id` from the fixture lists, live scores, or search):
+         *     teams, kickoff, venue, lineups and substitutes, structured events,
+         *     statistics, and broadcast channels including per-country coverage.
          */
         get: operations["sportSnapMatch"];
         put?: never;
@@ -265,7 +282,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sport-snap/countries/{country}/channels": {
+    "/v1/sport-snap/xmatch/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -273,13 +290,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * TV channels known for a country.
-         * @description Returns the TV channels known for the country, aggregated from
-         *     crawled match coverage and channel data. The directory accretes as
-         *     matches and schedules are fetched; a 404 means no channels are known
-         *     for the country yet.
+         * Extended match detail with locale translations.
+         * @description Extended variant of the match view: adds `*_translations` maps for
+         *     the competition and team names.
          */
-        get: operations["sportSnapCountryChannels"];
+        get: operations["sportSnapMatchExtended"];
         put?: never;
         post?: never;
         delete?: never;
@@ -288,7 +303,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/sport-snap/schedules/{date}": {
+    "/v1/sport-snap/match/{id}/stats": {
         parameters: {
             query?: never;
             header?: never;
@@ -296,12 +311,615 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Daily broadcast schedule grouped by competition.
-         * @description Returns the full broadcast schedule for the given date, grouped by
-         *     competition, with kickoff times normalized to UTC and per-match
-         *     channel listings.
+         * Match statistics.
+         * @description Match view with statistics fields (shots, possession, cards, saves,
+         *     ...) populated when the source provides them — same shape as
+         *     `/v1/sport-snap/match/{id}`.
          */
-        get: operations["sportSnapDailySchedule"];
+        get: operations["sportSnapMatchStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/match/{id}/commentaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match commentary / event feed.
+         * @description Match view with the structured event feed populated when the source
+         *     provides it — same shape as `/v1/sport-snap/match/{id}`.
+         */
+        get: operations["sportSnapMatchCommentaries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/match/{id}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match broadcast channels for a region.
+         * @description Match view with broadcast channels resolved for the requested
+         *     `iso_code` region — same shape as `/v1/sport-snap/match/{id}`.
+         */
+        get: operations["sportSnapMatchChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/xmatch/{id}/extra_broadcasts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Extra broadcast options for a match.
+         * @description Extended match view carrying additional broadcast options (repeats,
+         *     on-demand listings) — same shape as `/v1/sport-snap/xmatch/{id}`.
+         */
+        get: operations["sportSnapMatchExtraBroadcasts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/competitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Competition catalog.
+         * @description Returns the competition catalog: popular competitions, domestic
+         *     leagues grouped by country, international club competitions, and
+         *     international tournaments.
+         */
+        get: operations["sportSnapCompetitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/competitions/{country}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Competition detail — fixtures, standings, top scorers, TV rights.
+         * @description Returns the competition view: fixtures around the current date (with
+         *     `fixtures_next`/`fixtures_prev` cursors), standings, top scorers,
+         *     and broadcast-rights holders. Path segments come from
+         *     `competition_url` values in other payloads.
+         */
+        get: operations["sportSnapCompetition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/competitions/{country}/{slug}/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Competition standings.
+         * @description Returns the competition standings, grouped by tournament stage.
+         */
+        get: operations["sportSnapCompetitionTables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/competitions/{country}/{slug}/tv_rights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Competition broadcast-rights holders.
+         * @description Returns the channels holding broadcast rights for the competition.
+         */
+        get: operations["sportSnapCompetitionTvRights"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/competitions/{country}/{slug}/twitter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Social feed items for a competition.
+         * @description Returns social feed items for the competition (often empty).
+         */
+        get: operations["sportSnapCompetitionTwitter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/teams/popular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Popular teams.
+         * @description Returns the popular-teams list.
+         */
+        get: operations["sportSnapPopularTeams"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/teams/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Full national-team catalog.
+         * @description Returns the full national-team catalog: per-country men's and
+         *     women's team names with the slugs used by
+         *     `/v1/sport-snap/countries/{slug}`.
+         */
+        get: operations["sportSnapAllTeams"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/countries/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * National team detail.
+         * @description Returns the national-team view: team profile, squad, competitions,
+         *     and fixtures with paging cursors.
+         */
+        get: operations["sportSnapNationalTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/teams/{country}/{team}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Club team detail.
+         * @description Returns the club view: club profile, squad, competitions, and
+         *     fixtures with paging cursors. Path segments come from team `url`
+         *     values in other payloads (e.g. `/teams/spain/barcelona/`).
+         */
+        get: operations["sportSnapClubTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/all_channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Full TV channel catalog for a region.
+         * @description Returns the full TV channel catalog for the `iso_code` region.
+         */
+        get: operations["sportSnapAllChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Curated TV channel list for a region.
+         * @description Returns the curated (football-relevant) channel list for the
+         *     `iso_code` region.
+         */
+        get: operations["sportSnapChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/channels/{slug}/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * TV channel metadata and TV rights.
+         * @description Returns channel metadata (name, platform, website, coverage with
+         *     translations) and the channel's broadcast rights.
+         */
+        get: operations["sportSnapChannelInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/channels/{slug}/repeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * TV channel broadcast schedule.
+         * @description Returns the channel's repeat/upcoming broadcast schedule with paging
+         *     cursors. An empty `fixtures` array is a valid 200, not a 404.
+         */
+        get: operations["sportSnapChannelRepeats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/news": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Football news feed.
+         * @description Returns the news feed, paginated via `start`. Pass a match id as
+         *     `id` to restrict the feed to news about that match.
+         */
+        get: operations["sportSnapNews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/news/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * News filtered by tag.
+         * @description Returns news carrying the given tag (e.g. `messi`, `world-cup`),
+         *     paginated via `start`.
+         */
+        get: operations["sportSnapNewsByTag"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/news/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Single news article.
+         * @description Returns the article (body HTML, tags, byline) plus related articles.
+         */
+        get: operations["sportSnapNewsArticle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/news_about/competitions/{country}/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * News about a competition.
+         * @description Returns news about the competition, paginated via `start`.
+         */
+        get: operations["sportSnapCompetitionNews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/news_about/countries/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * News about a national team.
+         * @description Returns news about the national team, paginated via `start`.
+         */
+        get: operations["sportSnapNationalTeamNews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/news_about/teams/{country}/{team}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * News about a club team.
+         * @description Returns news about the club, paginated via `start`.
+         */
+        get: operations["sportSnapClubTeamNews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/search/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search across teams, competitions, matches, and players.
+         * @description Full-text search across every entity type. Result `url` values are
+         *     source-relative paths whose segments feed the corresponding
+         *     endpoints of this API.
+         */
+        get: operations["sportSnapSearchAll"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/search/teams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search teams.
+         * @description Full-text search over teams.
+         */
+        get: operations["sportSnapSearchTeams"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/search/competitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search competitions.
+         * @description Full-text search over competitions.
+         */
+        get: operations["sportSnapSearchCompetitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/search/matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search matches.
+         * @description Full-text search over matches.
+         */
+        get: operations["sportSnapSearchMatches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/search/players": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search players.
+         * @description Full-text search over players. Result `url` values carry the
+         *     `{slug}/{id}` segments used by `/v1/sport-snap/player/{slug}/{id}`.
+         */
+        get: operations["sportSnapSearchPlayers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/search/popular": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Popular searches.
+         * @description Returns the currently popular search results.
+         */
+        get: operations["sportSnapPopularSearches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sport-snap/player/{slug}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Player profile and per-season statistics.
+         * @description Returns the player profile, current team, and per-season statistics
+         *     (club, cups, international). The `{slug}/{id}` pair comes from
+         *     player `url` values in search results, lineups, and squads.
+         */
+        get: operations["sportSnapPlayer"];
         put?: never;
         post?: never;
         delete?: never;
@@ -378,20 +996,59 @@ export interface components {
         SubdoSnapScanResponse: components["schemas"]["BaseResponse"] & {
             data?: components["schemas"]["SubdoSnapScanData"];
         };
-        SportSnapChannelResponse: components["schemas"]["BaseResponse"] & {
-            data?: components["schemas"]["ChannelData"];
+        SportSnapLivescoresResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["LivescoresData"];
         };
-        SportSnapChannelScheduleResponse: components["schemas"]["BaseResponse"] & {
-            data?: components["schemas"]["ChannelScheduleData"];
+        SportSnapMatchesResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["MatchesData"];
         };
         SportSnapMatchResponse: components["schemas"]["BaseResponse"] & {
             data?: components["schemas"]["MatchData"];
         };
-        SportSnapCountryChannelsResponse: components["schemas"]["BaseResponse"] & {
-            data?: components["schemas"]["CountryChannelsData"];
+        SportSnapCompetitionsResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["CompetitionsData"];
         };
-        SportSnapDailyScheduleResponse: components["schemas"]["BaseResponse"] & {
-            data?: components["schemas"]["DailyScheduleData"];
+        SportSnapCompetitionDetailResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["CompetitionDetailData"];
+        };
+        SportSnapCompetitionTablesResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["CompetitionTablesData"];
+        };
+        SportSnapCompetitionTvRightsResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["CompetitionTvRightsData"];
+        };
+        SportSnapCompetitionTwitterResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["CompetitionTwitterData"];
+        };
+        SportSnapPopularTeamsResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["PopularTeamsData"];
+        };
+        SportSnapAllTeamsResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["AllTeamsData"];
+        };
+        SportSnapTeamDetailResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["TeamDetailData"];
+        };
+        SportSnapChannelsResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["ChannelsData"];
+        };
+        SportSnapChannelInfoResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["ChannelInfoData"];
+        };
+        SportSnapChannelRepeatsResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["ChannelRepeatsData"];
+        };
+        SportSnapNewsListResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["NewsListData"];
+        };
+        SportSnapNewsDetailResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["NewsDetailData"];
+        };
+        SportSnapSearchResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["SearchData"];
+        };
+        SportSnapPlayerResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["PlayerData"];
         };
         IocUrlScanData: {
             /** @description SHA-256 of the queried URL. */
@@ -643,227 +1300,687 @@ export interface components {
              */
             count?: number;
         };
-        BroadcastRight: {
-            /** @description Competition display name, e.g. "England - Premier League". */
-            competition: string;
-            /**
-             * Format: int32
-             * @description First year of the rights window, e.g. 2024.
-             */
-            year_start: number;
-            /**
-             * Format: int32
-             * @description Last year of the rights window; null when open-ended or unspecified.
-             */
-            year_end?: number | null;
+        LivescoreEvent: {
+            /** @description goal, yellowcard, redcard, substitution, ... */
+            type?: string;
+            minute?: string;
+            extra_min?: string;
+            /** @description localteam or visitorteam. */
+            team?: string;
+            player?: string;
+            /** @description Score after the event for goals, e.g. "[1 - 0]". */
+            result?: string;
+            assist?: string;
+            assistId?: string;
+            playerIn?: string;
+            playerInId?: string;
+            playerOut?: string;
+            playerOutId?: string;
         };
-        ChannelData: {
-            slug: string;
-            /** @description Channel display name, e.g. "beIN CONNECT Turkey". */
-            name: string;
-            /** @description Country the channel belongs to, when the source states it. */
-            country?: string | null;
-            /** @description Free-text channel description from the source's About section. */
-            about?: string | null;
-            /**
-             * Format: uri
-             * @description The channel's own website, when linked.
-             */
-            website?: string | null;
-            broadcast_rights: components["schemas"]["BroadcastRight"][];
-            /** Format: date-time */
-            updated_at: string;
+        LivescoreMatch: {
+            /** @description Match id usable with `/api/v1/match/{id}`. */
+            id?: string;
+            /** @description Display line including the running score, e.g. "BATE II 1 - 4 Lida". */
+            game?: string;
+            /** @example 1 - 4 */
+            result?: string;
+            /** @description Competition id. */
+            cid?: string;
+            rank?: string;
+            /** @description FT, HT, Cancl., a running minute, or empty. */
+            status?: string;
+            timer?: string;
+            date?: string;
+            time?: string;
+            events?: components["schemas"]["LivescoreEvent"][];
         };
-        ChannelScheduleEntry: {
-            /**
-             * Format: date
-             * @description Listing day as rendered by the source (source-local calendar day).
-             */
-            date: string;
-            /**
-             * Format: date-time
-             * @description Kickoff normalized to UTC; null if the time could not be parsed.
-             */
-            kickoff_utc?: string | null;
-            /** @description Kickoff clock in the source's rendering zone, cleaned of live/status markers (e.g. "4:00pm", "20:45"); null if the time could not be parsed. */
-            kickoff_local?: string | null;
-            /** @description Raw time cell exactly as rendered by the source, including any live badge and status suffix (e.g. "Live+  4:00pm86'") — debug/diagnostic aid. */
-            kickoff_raw?: string | null;
-            /**
-             * Format: int64
-             * @description Numeric match id usable with `/api/v1/matches/{id}`; null when the source link carried no id.
-             */
-            match_id?: number | null;
-            /** @description E.g. "Brazil vs Norway". */
-            match_title: string;
-            home_team?: string | null;
-            away_team?: string | null;
-            /** @description True when at least one side is an undecided knockout-bracket slot (the source renders placeholders like "W93" or "L101" until the pairing is known). */
-            is_placeholder: boolean;
-            /** @description Stage/round annotation, e.g. "Round of 16". */
-            round?: string | null;
-            competition: string;
+        LivescoresData: {
+            /** @example soccer */
+            sport: string;
+            /** @description Source-side refresh time, `YYYY-MM-DD HH:MM:SS`. */
+            updated: string;
+            matches: components["schemas"]["LivescoreMatch"][];
         };
-        ChannelScheduleData: {
-            slug: string;
-            name: string;
-            /** @description Empty array when the channel has no upcoming listings. */
-            entries: components["schemas"]["ChannelScheduleEntry"][];
-            /** Format: date-time */
-            updated_at: string;
+        ChannelRef: {
+            /** @description Channel slug usable with `/api/v1/channels/{slug}/info`. */
+            slug?: string;
+            name?: string;
+            /** @description 1 when the channel is local to the requested region. */
+            local?: string;
         };
         /**
-         * @description Lifecycle discriminator. `scheduled`: meta + broadcasts only.
-         *     `live`: kickoff passed, no full-time marker yet. `finished`:
-         *     full-time result available (score/events/stats/lineups populated
-         *     as far as the source provides them).
-         * @enum {string}
+         * @description Locale-keyed translated strings (e.g. `{"tr": "Dünya Kupası"}`).
+         *     Present only on extended (`x*`) endpoints and only for locales the
+         *     source translates.
          */
-        MatchStatus: "scheduled" | "live" | "finished";
-        CompetitionRef: {
-            name: string;
+        Translations: {
+            [key: string]: string;
         };
-        TeamRef: {
-            name: string;
+        FixtureSummary: {
+            /** @description Match id usable with `/api/v1/match/{id}`. */
+            fixture_id?: string;
+            /** @description Kickoff as unix seconds (string). */
+            timestamp?: string;
+            datetime?: string | null;
+            time?: string | null;
+            season?: string | null;
+            type?: string | null;
+            matchweek?: string;
+            /** @example Norway vs England */
+            game?: string;
+            team1_id?: string;
+            team2_id?: string;
+            team1_name?: string;
+            team2_name?: string;
+            team1_result?: string | null;
+            team2_result?: string | null;
+            team1_rc?: string | null;
+            team2_rc?: string | null;
+            venue?: string;
+            status?: string;
+            /** @description Y when a final result exists, N otherwise. */
+            result?: string;
+            penalty_win?: string;
+            agg_winner?: string | null;
+            description?: string;
+            /** @description Source-relative match path, e.g. `/match/5542822/norway-vs-england`. */
+            url?: string;
+            /** @description Y/N availability flag. */
+            events?: string;
+            /** @description Y/N availability flag. */
+            stats?: string;
+            /** @description Y/N availability flag. */
+            lineups?: string;
+            /** @description Y/N availability flag. */
+            commentaries?: string;
+            /** @description Y/N availability flag. */
+            tables?: string;
+            /** @description Present on team fixtures. */
+            competition?: string;
+            competition_id?: string;
+            competition_country?: string;
+            competition_slug?: string;
+            competition_url?: string;
+            /** @description Broadcast channels for the requested region (list endpoints only). */
+            channels?: components["schemas"]["ChannelRef"][];
+            team1_name_translations?: components["schemas"]["Translations"];
+            team2_name_translations?: components["schemas"]["Translations"];
         };
-        Score: {
-            /** Format: int32 */
-            home: number;
-            /** Format: int32 */
-            away: number;
+        CompetitionFixtures: {
+            id?: string;
+            country?: string;
+            country_trans?: string;
+            continent?: string;
+            competition?: string;
+            slug?: string;
+            /** @description Y/N. */
+            popular?: string;
+            /** @description Path usable with `/api/v1/competitions/{country}/{slug}`. */
+            competition_url?: string;
+            fixtures?: components["schemas"]["FixtureSummary"][];
+        };
+        MatchesData: {
+            competitions: components["schemas"]["CompetitionFixtures"][];
+        };
+        MatchCompetition: {
+            competition_id?: string;
+            slug?: string;
+            competition?: string;
+            country?: string;
+            country_trans?: string;
+            continent?: string;
+            /** @description Path usable with `/api/v1/competitions/{country}/{slug}`. */
+            url?: string;
+            /** @description Y/N. */
+            show_country?: string;
+            competition_translations?: components["schemas"]["Translations"];
+        };
+        Coach: {
+            /** Format: int64 */
+            id?: number | null;
+            name?: string | null;
+        };
+        LineupPlayer: {
+            /** Format: int64 */
+            id?: number;
+            no?: string;
+            name?: string;
+            /** @description G, D, M or F. */
+            field_position?: string;
+            /** @description Slot in the formation; S for substitutes. */
+            formation_position?: string;
+            /** @description Player path usable with `/api/v1/player/{slug}/{id}`. */
+            url?: string;
         };
         MatchEvent: {
-            /** @description Match minute as rendered, including stoppage notation, e.g. "45+2", "120+5". */
-            minute: string;
-            /** @enum {string} */
-            team: "home" | "away";
-            /** @enum {string} */
-            type: "goal" | "own_goal" | "penalty_goal" | "yellow_card" | "red_card" | "substitution";
-            /** @description For substitutions this is the player coming ON. */
-            player: string;
-            /** @description Substitutions only; the player going off. */
-            player_out?: string | null;
-            /** @description Goals only; assisting player when credited. */
-            assist?: string | null;
-            /** @description Running score annotation after a goal, e.g. "1 - 2". */
-            running_score?: string | null;
+            /** @description goal, yellowcard, redcard, substitution, penalty, ... */
+            type?: string;
+            minute?: string;
+            extra_min?: string;
+            /** @description localteam or visitorteam. */
+            team?: string;
+            player?: string;
+            playerId?: string;
+            result?: string;
+            assist?: string;
+            assistId?: string;
+            playerIn?: string;
+            playerInId?: string;
+            playerOut?: string;
+            playerOutId?: string;
         };
-        MatchStat: {
-            /** @description Statistics section header, e.g. "Summary", "Shots", "Passes". */
-            section: string;
-            /** @description Stat row label, e.g. "On goal", "Possession". */
-            label: string;
-            /** @description Home value as rendered (may be a percentage like "52%"). */
-            home: string;
-            away: string;
-        };
-        Lineup: {
-            starting: string[];
-            substitutes: string[];
-            coach?: string | null;
-        };
-        Lineups: {
-            home: components["schemas"]["Lineup"];
-            away: components["schemas"]["Lineup"];
+        ChannelPlatform: {
+            /** @example Android App */
+            platform?: string;
+            /** @description Empty when the source value had to be sanitized. */
+            url?: string;
+            note?: string;
         };
         BroadcastChannel: {
-            name: string;
-            /** @description Channel slug usable with `/api/v1/channels/{slug}`; null when the source did not link the channel. */
-            slug?: string | null;
+            channel_id?: string;
+            /** @description Channel slug usable with `/api/v1/channels/{slug}/info`. */
+            slug?: string;
+            name?: string;
+            /** @description Pipe-delimited country list as sent by the source, e.g. `|United States|`. */
+            country?: string;
+            countries?: string;
+            coverage?: string;
+            betting?: string;
+            mobile_url?: string;
+            ios_url?: string;
+            android_url?: string;
+            blocked?: string;
+            allowed?: string;
+            stream_note?: string;
+            note?: string;
+            radio_url?: string;
+            platforms?: components["schemas"]["ChannelPlatform"][];
         };
-        CountryBroadcast: {
-            /** @description Country display name, e.g. "United States". */
-            country: string;
-            /** @description Slugified country name usable with `/api/v1/countries/{country}/channels`. */
-            country_slug: string;
-            channels: components["schemas"]["BroadcastChannel"][];
+        CountryBroadcasts: {
+            country?: string;
+            country_code?: string;
+            country_trans?: string;
+            channels?: components["schemas"]["BroadcastChannel"][];
+        };
+        RepeatBroadcast: {
+            fixture_id?: string;
+            game?: string;
+            name?: string;
+            lname?: string;
+            slug?: string;
+            country?: string;
+            timestamp?: string;
+            datetime?: string;
+        };
+        MatchFixture: {
+            fixture_id?: string;
+            date?: string;
+            time?: string;
+            datetime?: string;
+            season?: string;
+            matchweek?: string;
+            game?: string;
+            venue?: string;
+            /** @description Empty, a running minute, HT, FT, ... */
+            status?: string;
+            /** @description Y when a final result exists. */
+            result?: string;
+            halftime_score?: string;
+            penalty_win?: string;
+            type?: string;
+            /** @description m or f. */
+            gender?: string;
+            live?: string;
+            network?: string;
+            description?: string;
+            details?: string;
+            extras?: string;
+            videos?: string;
+            /** @description Y/N featured flag. */
+            highlight?: string;
+            /** @description Kickoff as unix seconds (string). */
+            timestamp?: string;
+            /** @description Y/N availability flag. */
+            commentaries?: string;
+            /** @description Y/N availability flag. */
+            tables?: string;
+            /** @description Y/N availability flag. */
+            stats?: string;
+            team1_id?: string;
+            team2_id?: string;
+            team1_slug?: string;
+            team2_slug?: string;
+            team1_name?: string;
+            team2_name?: string;
+            team1_country?: string | null;
+            team2_country?: string | null;
+            team1_result?: string | null;
+            team2_result?: string | null;
+            team1_pos?: string | null;
+            team2_pos?: string | null;
+            /** @description Team path usable with `/api/v1/countries/{slug}` or `/api/v1/teams/{country}/{team}`. */
+            team1_url?: string;
+            team2_url?: string;
+            /** @example LWW */
+            team1_form?: string;
+            team2_form?: string;
+            team1_coach?: components["schemas"]["Coach"];
+            team2_coach?: components["schemas"]["Coach"];
+            /** Format: int64 */
+            team1_captain_id?: number | null;
+            /** Format: int64 */
+            team2_captain_id?: number | null;
+            team1_formation?: string | null;
+            team2_formation?: string | null;
+            agg_firstteam?: string | null;
+            agg_secondteam?: string | null;
+            agg_winner?: string | null;
+            agg_score?: string | null;
+            agg_id?: string | null;
+            leg1_result?: string | null;
+            leg2_result?: string | null;
+            leg?: string | null;
+            team1_goals?: string | null;
+            team2_goals?: string | null;
+            team1_yc_data?: string | null;
+            team2_yc_data?: string | null;
+            team1_rc_data?: string | null;
+            team2_rc_data?: string | null;
+            team1_shots?: string | null;
+            team2_shots?: string | null;
+            team1_shots_ongoal?: string | null;
+            team2_shots_ongoal?: string | null;
+            team1_fouls?: string | null;
+            team2_fouls?: string | null;
+            team1_corners?: string | null;
+            team2_corners?: string | null;
+            team1_offsides?: string | null;
+            team2_offsides?: string | null;
+            team1_possessiontime?: string | null;
+            team2_possessiontime?: string | null;
+            team1_yc?: string | null;
+            team2_yc?: string | null;
+            team1_rc?: string | null;
+            team2_rc?: string | null;
+            team1_saves?: string | null;
+            team2_saves?: string | null;
+            /** @description Starting lineup (structured; raw source blobs are dropped). */
+            team1_players?: components["schemas"]["LineupPlayer"][];
+            team2_players?: components["schemas"]["LineupPlayer"][];
+            team1_substitutes?: components["schemas"]["LineupPlayer"][];
+            team2_substitutes?: components["schemas"]["LineupPlayer"][];
+            team1_substitutions?: components["schemas"]["MatchEvent"][];
+            team2_substitutions?: components["schemas"]["MatchEvent"][];
+            /** @description Structured in-match events (goals, cards, substitutions). */
+            events?: components["schemas"]["MatchEvent"][] | null;
+            penalties?: components["schemas"]["MatchEvent"][] | null;
+            /** @description Broadcast channels for the requested region. */
+            channels?: components["schemas"]["BroadcastChannel"][];
+            channels_short?: components["schemas"]["ChannelRef"][];
+            /** @description Per-country premium broadcast groups. */
+            pchannels?: components["schemas"]["CountryBroadcasts"][];
+            /** @description Broadcast channels for every country. */
+            all_channels?: components["schemas"]["CountryBroadcasts"][];
+            repeats?: components["schemas"]["RepeatBroadcast"][];
+            ondemand?: components["schemas"]["RepeatBroadcast"][];
+            team1_name_translations?: components["schemas"]["Translations"];
+            team2_name_translations?: components["schemas"]["Translations"];
         };
         MatchData: {
-            /** Format: int64 */
-            id: number;
-            status: components["schemas"]["MatchStatus"];
-            competition: components["schemas"]["CompetitionRef"];
-            round?: string | null;
-            home_team: components["schemas"]["TeamRef"];
-            away_team: components["schemas"]["TeamRef"];
-            /** @description True when at least one side is an undecided knockout-bracket slot (the source renders placeholders like "W93" or "L101" until the pairing is known). */
-            is_placeholder: boolean;
-            /**
-             * Format: date-time
-             * @description Kickoff normalized to UTC; null if the time could not be parsed.
-             */
-            kickoff_utc?: string | null;
-            /** @description Kickoff date+time in the source's rendering zone, cleaned of live/status markers (e.g. "Jul 5, 2026 16:00"); null if the time could not be parsed. */
-            kickoff_local?: string | null;
-            /** @description Raw kickoff header exactly as rendered by the source — debug/diagnostic aid. */
-            kickoff_raw?: string | null;
-            venue?: string | null;
-            score?: components["schemas"]["Score"] | null;
-            /** @description Empty for scheduled matches. */
-            events?: components["schemas"]["MatchEvent"][];
-            /** @description Empty for scheduled matches. */
-            stats?: components["schemas"]["MatchStat"][];
-            lineups?: components["schemas"]["Lineups"] | null;
-            /** @description Per-country broadcast coverage from the source's international coverage table. */
-            broadcasts: components["schemas"]["CountryBroadcast"][];
-            /**
-             * Format: uri
-             * @description Official highlights link for finished matches, when present.
-             */
-            highlights_url?: string | null;
-            /** Format: date-time */
-            updated_at: string;
+            competition: components["schemas"]["MatchCompetition"];
+            fixture: components["schemas"]["MatchFixture"];
         };
-        CountryChannel: {
-            name: string;
-            /** @description Channel slug usable with `/api/v1/channels/{slug}`; null when never linked by the source. */
-            slug?: string | null;
-            /**
-             * Format: date-time
-             * @description Last time this channel was observed for this country in crawled data.
-             */
-            last_seen: string;
+        CompetitionListItem: {
+            competition_id?: string;
+            name?: string;
+            slug?: string;
+            country?: string;
+            country_trans?: string;
+            continent?: string;
         };
-        CountryChannelsData: {
-            country: string;
-            country_slug: string;
-            channels: components["schemas"]["CountryChannel"][];
-            /** Format: date-time */
-            updated_at: string;
+        CountryCompetitions: {
+            country?: string;
+            country_trans?: string;
+            competitions?: components["schemas"]["CompetitionListItem"][];
         };
-        ScheduledMatch: {
-            /**
-             * Format: int64
-             * @description Numeric match id usable with `/api/v1/matches/{id}`; null when the source link carried no id.
-             */
-            id?: number | null;
-            /** @description E.g. "Belgium vs Senegal". */
-            title: string;
-            home_team?: string | null;
-            away_team?: string | null;
-            /** @description True when at least one side is an undecided knockout-bracket slot (the source renders placeholders like "W93" or "L101" until the pairing is known). */
-            is_placeholder: boolean;
-            status: components["schemas"]["MatchStatus"];
-            score?: components["schemas"]["Score"] | null;
-            /** Format: date-time */
-            kickoff_utc?: string | null;
-            /** @description Kickoff clock in the source's rendering zone, cleaned of live/status markers (e.g. "4:00pm", "20:45"); null if the time could not be parsed. */
-            kickoff_local?: string | null;
-            /** @description Raw time cell exactly as rendered by the source, including any live badge and status suffix (e.g. "Live+  4:00pm86'") — debug/diagnostic aid. */
-            kickoff_raw?: string | null;
-            round?: string | null;
-            channels: components["schemas"]["BroadcastChannel"][];
+        CompetitionsData: {
+            competitions: {
+                comp_popular?: components["schemas"]["CompetitionListItem"][];
+                comp_club_domestic?: components["schemas"]["CountryCompetitions"][];
+                comp_club_int?: components["schemas"]["CompetitionListItem"][];
+                comp_int?: components["schemas"]["CompetitionListItem"][];
+            };
         };
-        CompetitionSchedule: {
-            competition: string;
-            matches: components["schemas"]["ScheduledMatch"][];
+        CompetitionHeader: {
+            competition_id?: string;
+            country?: string;
+            country_trans?: string;
+            slug?: string;
+            competition?: string;
+            competition_url?: string;
+            /** @description Source-relative news path, e.g. `/news/tags/world-cup`. */
+            news_url?: string;
         };
-        DailyScheduleData: {
-            /** Format: date */
-            date: string;
-            competitions: components["schemas"]["CompetitionSchedule"][];
-            /** Format: date-time */
-            updated_at: string;
+        TableRow: {
+            team_id?: string;
+            tournament?: string;
+            position?: string;
+            /** @description same, up or down (movement vs previous round). */
+            status?: string;
+            name?: string;
+            overall_gp?: string;
+            overall_gs?: string;
+            overall_ga?: string;
+            overall_ga_gs?: string;
+            home_ga_gs?: string;
+            away_ga_gs?: string;
+            home_gp?: string;
+            away_gp?: string;
+            total_gd?: string;
+            home_gd?: string;
+            away_gd?: string;
+            total_p?: string;
+            home_p?: string;
+            away_p?: string;
+            overall_w?: string;
+            overall_d?: string;
+            overall_l?: string;
+            home_w?: string;
+            home_d?: string;
+            home_l?: string;
+            away_w?: string;
+            away_d?: string;
+            away_l?: string;
+            /** @description Team path usable with the team endpoints. */
+            url?: string;
+            /** @example WWW */
+            form?: string;
+            promotion?: string;
+        };
+        TableGroup: {
+            /** @description Stage name, e.g. "Group A". */
+            tournament?: string;
+            tables?: components["schemas"]["TableRow"][];
+        };
+        Topscorer: {
+            club_id?: string;
+            position?: string;
+            name?: string;
+            team?: string;
+            goals?: string;
+            penalty_goals?: string;
+            /** @description Player path usable with `/api/v1/player/{slug}/{id}`. */
+            url?: string;
+        };
+        TopscorerGroup: {
+            id?: string;
+            stage?: string;
+            topscorers?: components["schemas"]["Topscorer"][];
+        };
+        TvRight: {
+            channel_id?: string;
+            name?: string;
+            lname?: string;
+            /** @description Channel slug usable with `/api/v1/channels/{slug}/info`. */
+            slug?: string;
+            /** @example TV */
+            platform?: string;
+            description?: string;
+            expiry?: string;
+            comments?: string;
+            season_from?: string;
+            season_to?: string;
+        };
+        CompetitionDetailData: {
+            competition: components["schemas"]["CompetitionHeader"];
+            fixtures?: components["schemas"]["FixtureSummary"][];
+            /** @description Source-relative cursor for the next fixtures page. */
+            fixtures_next?: string | null;
+            fixtures_prev?: string | null;
+            tables?: components["schemas"]["TableGroup"][];
+            topscorers?: components["schemas"]["TopscorerGroup"][];
+            tv_rights?: components["schemas"]["TvRight"][];
+        };
+        CompetitionTablesData: {
+            competition: components["schemas"]["CompetitionHeader"];
+            tables: components["schemas"]["TableGroup"][];
+        };
+        CompetitionTvRightsData: {
+            competition: components["schemas"]["CompetitionHeader"];
+            tv_rights: components["schemas"]["TvRight"][];
+        };
+        CompetitionTwitterData: {
+            /** @description Social feed items; free-form (observed empty), sanitized like every payload. */
+            items: Record<string, never>[];
+            next?: string | null;
+            prev?: string | null;
+        };
+        PopularTeam: {
+            club_id?: string;
+            country?: string;
+            country_trans?: string;
+            /** @description Source-relative team path, e.g. `/countries/usa/` or `/teams/spain/barcelona/`. */
+            slug?: string;
+            title?: string;
+        };
+        PopularTeamsData: {
+            /** @description Lifted from the source's `teams.teams_popular` wrapper. */
+            teams: components["schemas"]["PopularTeam"][];
+        };
+        CountryTeams: {
+            country?: string;
+            country_trans?: string;
+            /** @description Slug usable with `/api/v1/countries/{slug}`. */
+            slug?: string;
+            country_team?: string;
+            country_women_team?: string;
+            slug_women?: string;
+        };
+        AllTeamsData: {
+            /** @description Lifted from the source's `teams.teams_all` wrapper. */
+            teams: components["schemas"]["CountryTeams"][];
+        };
+        /** @description National teams carry association fields; clubs carry club fields. */
+        Team: {
+            association_id?: string;
+            association?: string;
+            adjective?: string;
+            affiliated?: string;
+            club_id?: string;
+            title?: string;
+            commonname?: string;
+            commonname_orig?: string;
+            competition_id?: string;
+            country?: string;
+            iso?: string;
+            nat_team?: string;
+            slug?: string;
+            venue?: string;
+            capacity?: string;
+            founded?: string;
+            coach?: string;
+        };
+        SquadPlayer: {
+            id?: string;
+            slug?: string;
+            name?: string;
+            number?: string;
+            first_name?: string;
+            last_name?: string;
+            nationality?: string;
+            /** @description G, D, M or F. */
+            position?: string;
+            goals?: string;
+            assists?: string;
+            /** @description Player path usable with `/api/v1/player/{slug}/{id}`. */
+            url?: string;
+        };
+        TeamCompetition: {
+            competition_id?: string;
+            country?: string;
+            continent?: string;
+            competition?: string;
+            slug?: string;
+            /** @description Path usable with `/api/v1/competitions/{country}/{slug}`. */
+            url?: string;
+        };
+        TeamDetailData: {
+            team: components["schemas"]["Team"];
+            squad?: components["schemas"]["SquadPlayer"][];
+            competitions?: components["schemas"]["TeamCompetition"][];
+            fixtures?: components["schemas"]["FixtureSummary"][];
+            fixtures_next?: string | null;
+            fixtures_prev?: string | null;
+        };
+        ChannelListing: {
+            channel_id?: string;
+            name?: string;
+            /** @description Slug usable with `/api/v1/channels/{slug}/info`. */
+            slug?: string;
+            /** @description Pipe-delimited country list as sent by the source. */
+            country?: string;
+            countries?: string;
+            regional?: string;
+            city?: string;
+            state?: string;
+            /** @description TV, Stream, Radio, ... */
+            platform?: string;
+            radio_url?: string;
+        };
+        ChannelsData: {
+            country?: {
+                name?: string;
+            };
+            channels: components["schemas"]["ChannelListing"][];
+        };
+        ChannelInfo: {
+            channel_id?: string;
+            slug?: string;
+            name?: string;
+            description?: string;
+            platform?: string;
+            /** @description The channel's own website. */
+            url?: string;
+            buy_url?: string;
+            coverage?: string;
+            quality?: string;
+            coverage_translations?: components["schemas"]["Translations"];
+        };
+        ChannelInfoData: {
+            channel: components["schemas"]["ChannelInfo"];
+            tv_rights?: components["schemas"]["TvRight"][];
+        };
+        ChannelRepeatsData: {
+            channel: components["schemas"]["ChannelInfo"];
+            fixtures: components["schemas"]["FixtureSummary"][];
+            fixtures_next?: string | null;
+            fixtures_prev?: string | null;
+        };
+        NewsArticle: {
+            /** @description Id usable with `/api/v1/news/{id}`. */
+            article_id?: string;
+            status?: string;
+            title?: string;
+            slug?: string;
+            publish_date?: string;
+            /** @description Article author byline. */
+            source?: string;
+            timestamp?: string | null;
+        };
+        NewsListData: {
+            articles: components["schemas"]["NewsArticle"][];
+            news_lang?: string;
+            /** @description Whether the source suggests switching the feed language. */
+            news_lang_hint?: boolean | null;
+        };
+        NewsArticleDetail: {
+            article_id?: string;
+            status?: string;
+            title?: string;
+            slug?: string;
+            publish_date?: string;
+            /** @description Article author byline. */
+            source?: string;
+            language?: string;
+            /** @description Article body HTML. */
+            content?: string;
+            excerpt?: string;
+            special_url?: string;
+            tags?: string;
+            tags_arr?: string[];
+            /** @description Space-separated team ids. */
+            team_ids?: string;
+        };
+        NewsDetailData: {
+            article: components["schemas"]["NewsArticleDetail"];
+            also_articles?: components["schemas"]["NewsArticle"][];
+            news_lang?: string;
+            /** @description Whether the source suggests switching the feed language. */
+            news_lang_hint?: boolean | null;
+        };
+        SearchResult: {
+            /** @description team, competition, match or player. */
+            type?: string;
+            /** @description Source-relative path resolvable with the matching endpoint of this API. */
+            url?: string;
+            title?: string;
+            description?: string;
+            description_orig?: string;
+            timestamp?: string | null;
+        };
+        SearchData: {
+            results: components["schemas"]["SearchResult"][];
+        };
+        PlayerProfile: {
+            id?: string;
+            slug?: string;
+            name?: string;
+            first_name?: string;
+            last_name?: string;
+            nationality?: string;
+            position?: string;
+            no?: string;
+            height?: string;
+            weight?: string;
+            birthday?: string;
+        };
+        PlayerTeam: {
+            id?: string;
+            /** @description Team path usable with `/api/v1/teams/{country}/{team}`. */
+            url?: string;
+            name?: string;
+            slug?: string;
+            country?: string;
+        };
+        PlayerStatRow: {
+            season?: string;
+            team?: string;
+            team_id?: string;
+            team_url?: string;
+            competition?: string;
+            competition_id?: string;
+            competition_url?: string;
+            minutes_played?: string;
+            appearances?: string;
+            lineups?: string;
+            subbed_on?: string;
+            subbed_off?: string;
+            substitute?: string;
+            goals?: string;
+            yellow_cards?: string;
+            yellowred_cards?: string;
+            red_cards?: string;
+        };
+        PlayerStats: {
+            club_stats?: components["schemas"]["PlayerStatRow"][];
+            cups_stats?: components["schemas"]["PlayerStatRow"][];
+            int_stats?: components["schemas"]["PlayerStatRow"][];
+            int_cups_stats?: components["schemas"]["PlayerStatRow"][];
+        };
+        PlayerData: {
+            profile: components["schemas"]["PlayerProfile"];
+            team?: components["schemas"]["PlayerTeam"];
+            stats?: components["schemas"]["PlayerStats"];
         };
     };
     responses: {
@@ -988,25 +2105,87 @@ export interface components {
          */
         CursorParam: string;
         /**
-         * @description TV channel slug, e.g. `bein-connect-turkey` or `fox-network`.
-         * @example bein-connect-turkey
+         * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+         *     Channel lists are region-specific; a default region is used when
+         *     omitted.
+         * @example US
+         */
+        IsoCodeQueryParam: string;
+        /**
+         * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+         *     (`*_trans`) fields.
+         * @example en
+         */
+        LangQueryParam: string;
+        /**
+         * @description Unix-second watermark for incremental fetches; `0` (default)
+         *     returns everything.
+         */
+        TimestampQueryParam: number;
+        /** @description Pagination offset into the news feed. */
+        StartQueryParam: number;
+        /**
+         * @description Search query.
+         * @example barcelona
+         */
+        SearchQueryParam: string;
+        /**
+         * @description News tag slug.
+         * @example world-cup
+         */
+        TagQueryParam: string;
+        /** @description Restrict the news feed to news about this match id. */
+        NewsMatchIdQueryParam: number;
+        /**
+         * @description TV channel slug, e.g. `fox-network` (from channel lists or fixture channels).
+         * @example fox-network
          */
         ChannelSlugPathParam: string;
         /**
-         * @description Stable numeric match id, e.g. `5542814`.
-         * @example 5542814
+         * @description Stable numeric match id (`fixture_id`), e.g. `5542822`.
+         * @example 5542822
          */
         MatchIdPathParam: number;
         /**
-         * @description Slugified country name, e.g. `turkey`, `united-states`.
+         * @description National-team country slug, e.g. `usa`, `turkey` (from `/v1/sport-snap/teams/all`).
          * @example turkey
          */
         CountrySlugPathParam: string;
         /**
-         * @description Schedule date in `YYYY-MM-DD`.
-         * @example 2026-07-05
+         * @description Competition country segment of `competition_url`, e.g. `international`, `england`.
+         * @example international
          */
-        DatePathParam: string;
+        CompetitionCountryPathParam: string;
+        /**
+         * @description Competition slug segment of `competition_url`, e.g. `world-cup`, `premier-league`.
+         * @example world-cup
+         */
+        CompetitionSlugPathParam: string;
+        /**
+         * @description Club-team country slug, e.g. `spain` (from team URLs like `/teams/spain/barcelona/`).
+         * @example spain
+         */
+        TeamCountryPathParam: string;
+        /**
+         * @description Club-team slug, e.g. `barcelona`.
+         * @example barcelona
+         */
+        TeamSlugPathParam: string;
+        /**
+         * @description Player slug, e.g. `l-messi` (from player `url` values).
+         * @example l-messi
+         */
+        PlayerSlugPathParam: string;
+        /**
+         * @description Numeric player id, e.g. `252`.
+         * @example 252
+         */
+        PlayerIdPathParam: number;
+        /**
+         * @description Numeric news article id, e.g. `574202`.
+         * @example 574202
+         */
+        NewsIdPathParam: number;
     };
     requestBodies: never;
     headers: never;
@@ -1334,35 +2513,35 @@ export interface operations {
             504: components["responses"]["GatewayTimeout"];
         };
     };
-    sportSnapChannel: {
+    sportSnapLivescores: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
-                 * @description TV channel slug, e.g. `bein-connect-turkey` or `fox-network`.
-                 * @example bein-connect-turkey
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
                  */
-                slug: components["parameters"]["ChannelSlugPathParam"];
+                lang?: components["parameters"]["LangQueryParam"];
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Channel metadata with broadcast rights. */
+            /** @description Live score board. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SportSnapChannelResponse"];
+                    "application/json": components["schemas"]["SportSnapLivescoresResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PaymentRequired"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalServerError"];
             502: components["responses"]["BadGateway"];
@@ -1370,35 +2549,90 @@ export interface operations {
             504: components["responses"]["GatewayTimeout"];
         };
     };
-    sportSnapChannelSchedule: {
+    sportSnapMatches: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
+            query?: {
                 /**
-                 * @description TV channel slug, e.g. `bein-connect-turkey` or `fox-network`.
-                 * @example bein-connect-turkey
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
                  */
-                slug: components["parameters"]["ChannelSlugPathParam"];
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Channel broadcast schedule. */
+            /** @description Competitions with fixtures. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SportSnapChannelScheduleResponse"];
+                    "application/json": components["schemas"]["SportSnapMatchesResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             402: components["responses"]["PaymentRequired"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapMatchesExtended: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+                /**
+                 * @description Unix-second watermark for incremental fetches; `0` (default)
+                 *     returns everything.
+                 */
+                timestamp?: components["parameters"]["TimestampQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Competitions with extended fixtures. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapMatchesResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalServerError"];
             502: components["responses"]["BadGateway"];
@@ -1408,12 +2642,19 @@ export interface operations {
     };
     sportSnapMatch: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
             header?: never;
             path: {
                 /**
-                 * @description Stable numeric match id, e.g. `5542814`.
-                 * @example 5542814
+                 * @description Stable numeric match id (`fixture_id`), e.g. `5542822`.
+                 * @example 5542822
                  */
                 id: components["parameters"]["MatchIdPathParam"];
             };
@@ -1421,7 +2662,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Match details with per-country broadcast coverage. */
+            /** @description Match detail. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1442,28 +2683,35 @@ export interface operations {
             504: components["responses"]["GatewayTimeout"];
         };
     };
-    sportSnapCountryChannels: {
+    sportSnapMatchExtended: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
             header?: never;
             path: {
                 /**
-                 * @description Slugified country name, e.g. `turkey`, `united-states`.
-                 * @example turkey
+                 * @description Stable numeric match id (`fixture_id`), e.g. `5542822`.
+                 * @example 5542822
                  */
-                country: components["parameters"]["CountrySlugPathParam"];
+                id: components["parameters"]["MatchIdPathParam"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Channels known for the country. */
+            /** @description Extended match detail. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SportSnapCountryChannelsResponse"];
+                    "application/json": components["schemas"]["SportSnapMatchResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -1473,32 +2721,1327 @@ export interface operations {
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
             503: components["responses"]["ServiceUnavailable"];
             504: components["responses"]["GatewayTimeout"];
         };
     };
-    sportSnapDailySchedule: {
+    sportSnapMatchStats: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
             header?: never;
             path: {
                 /**
-                 * @description Schedule date in `YYYY-MM-DD`.
-                 * @example 2026-07-05
+                 * @description Stable numeric match id (`fixture_id`), e.g. `5542822`.
+                 * @example 5542822
                  */
-                date: components["parameters"]["DatePathParam"];
+                id: components["parameters"]["MatchIdPathParam"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Daily schedule for the given date. */
+            /** @description Match detail with statistics. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SportSnapDailyScheduleResponse"];
+                    "application/json": components["schemas"]["SportSnapMatchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapMatchCommentaries: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Stable numeric match id (`fixture_id`), e.g. `5542822`.
+                 * @example 5542822
+                 */
+                id: components["parameters"]["MatchIdPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Match detail with commentary events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapMatchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapMatchChannels: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Stable numeric match id (`fixture_id`), e.g. `5542822`.
+                 * @example 5542822
+                 */
+                id: components["parameters"]["MatchIdPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Match detail with region-resolved channels. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapMatchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapMatchExtraBroadcasts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Stable numeric match id (`fixture_id`), e.g. `5542822`.
+                 * @example 5542822
+                 */
+                id: components["parameters"]["MatchIdPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Extended match detail with extra broadcasts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapMatchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapCompetitions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Competition catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapCompetitionsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapCompetition: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Competition country segment of `competition_url`, e.g. `international`, `england`.
+                 * @example international
+                 */
+                country: components["parameters"]["CompetitionCountryPathParam"];
+                /**
+                 * @description Competition slug segment of `competition_url`, e.g. `world-cup`, `premier-league`.
+                 * @example world-cup
+                 */
+                slug: components["parameters"]["CompetitionSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Competition detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapCompetitionDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapCompetitionTables: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Competition country segment of `competition_url`, e.g. `international`, `england`.
+                 * @example international
+                 */
+                country: components["parameters"]["CompetitionCountryPathParam"];
+                /**
+                 * @description Competition slug segment of `competition_url`, e.g. `world-cup`, `premier-league`.
+                 * @example world-cup
+                 */
+                slug: components["parameters"]["CompetitionSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Competition standings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapCompetitionTablesResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapCompetitionTvRights: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Competition country segment of `competition_url`, e.g. `international`, `england`.
+                 * @example international
+                 */
+                country: components["parameters"]["CompetitionCountryPathParam"];
+                /**
+                 * @description Competition slug segment of `competition_url`, e.g. `world-cup`, `premier-league`.
+                 * @example world-cup
+                 */
+                slug: components["parameters"]["CompetitionSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Competition TV rights. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapCompetitionTvRightsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapCompetitionTwitter: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Competition country segment of `competition_url`, e.g. `international`, `england`.
+                 * @example international
+                 */
+                country: components["parameters"]["CompetitionCountryPathParam"];
+                /**
+                 * @description Competition slug segment of `competition_url`, e.g. `world-cup`, `premier-league`.
+                 * @example world-cup
+                 */
+                slug: components["parameters"]["CompetitionSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Social feed page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapCompetitionTwitterResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapPopularTeams: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Popular teams. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapPopularTeamsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapAllTeams: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description National-team catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapAllTeamsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapNationalTeam: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description National-team country slug, e.g. `usa`, `turkey` (from `/v1/sport-snap/teams/all`).
+                 * @example turkey
+                 */
+                slug: components["parameters"]["CountrySlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description National team detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapTeamDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapClubTeam: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Club-team country slug, e.g. `spain` (from team URLs like `/teams/spain/barcelona/`).
+                 * @example spain
+                 */
+                country: components["parameters"]["TeamCountryPathParam"];
+                /**
+                 * @description Club-team slug, e.g. `barcelona`.
+                 * @example barcelona
+                 */
+                team: components["parameters"]["TeamSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Club team detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapTeamDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapAllChannels: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel catalog. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapChannelsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapChannels: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapChannelsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapChannelInfo: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description TV channel slug, e.g. `fox-network` (from channel lists or fixture channels).
+                 * @example fox-network
+                 */
+                slug: components["parameters"]["ChannelSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel info. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapChannelInfoResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapChannelRepeats: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description TV channel slug, e.g. `fox-network` (from channel lists or fixture channels).
+                 * @example fox-network
+                 */
+                slug: components["parameters"]["ChannelSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel broadcast schedule. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapChannelRepeatsResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapNews: {
+        parameters: {
+            query?: {
+                /** @description Pagination offset into the news feed. */
+                start?: components["parameters"]["StartQueryParam"];
+                /**
+                 * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
+                 *     Channel lists are region-specific; a default region is used when
+                 *     omitted.
+                 * @example US
+                 */
+                iso_code?: components["parameters"]["IsoCodeQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+                /** @description Restrict the news feed to news about this match id. */
+                id?: components["parameters"]["NewsMatchIdQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description News feed page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapNewsListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapNewsByTag: {
+        parameters: {
+            query: {
+                /**
+                 * @description News tag slug.
+                 * @example world-cup
+                 */
+                tag: components["parameters"]["TagQueryParam"];
+                /** @description Pagination offset into the news feed. */
+                start?: components["parameters"]["StartQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description News feed page for the tag. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapNewsListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapNewsArticle: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Numeric news article id, e.g. `574202`.
+                 * @example 574202
+                 */
+                id: components["parameters"]["NewsIdPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Article detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapNewsDetailResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapCompetitionNews: {
+        parameters: {
+            query?: {
+                /** @description Pagination offset into the news feed. */
+                start?: components["parameters"]["StartQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Competition country segment of `competition_url`, e.g. `international`, `england`.
+                 * @example international
+                 */
+                country: components["parameters"]["CompetitionCountryPathParam"];
+                /**
+                 * @description Competition slug segment of `competition_url`, e.g. `world-cup`, `premier-league`.
+                 * @example world-cup
+                 */
+                slug: components["parameters"]["CompetitionSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description News feed page for the competition. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapNewsListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapNationalTeamNews: {
+        parameters: {
+            query?: {
+                /** @description Pagination offset into the news feed. */
+                start?: components["parameters"]["StartQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description National-team country slug, e.g. `usa`, `turkey` (from `/v1/sport-snap/teams/all`).
+                 * @example turkey
+                 */
+                slug: components["parameters"]["CountrySlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description News feed page for the national team. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapNewsListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapClubTeamNews: {
+        parameters: {
+            query?: {
+                /** @description Pagination offset into the news feed. */
+                start?: components["parameters"]["StartQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Club-team country slug, e.g. `spain` (from team URLs like `/teams/spain/barcelona/`).
+                 * @example spain
+                 */
+                country: components["parameters"]["TeamCountryPathParam"];
+                /**
+                 * @description Club-team slug, e.g. `barcelona`.
+                 * @example barcelona
+                 */
+                team: components["parameters"]["TeamSlugPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description News feed page for the club. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapNewsListResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapSearchAll: {
+        parameters: {
+            query: {
+                /**
+                 * @description Search query.
+                 * @example barcelona
+                 */
+                q: components["parameters"]["SearchQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Search results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapSearchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapSearchTeams: {
+        parameters: {
+            query: {
+                /**
+                 * @description Search query.
+                 * @example barcelona
+                 */
+                q: components["parameters"]["SearchQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Team search results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapSearchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapSearchCompetitions: {
+        parameters: {
+            query: {
+                /**
+                 * @description Search query.
+                 * @example barcelona
+                 */
+                q: components["parameters"]["SearchQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Competition search results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapSearchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapSearchMatches: {
+        parameters: {
+            query: {
+                /**
+                 * @description Search query.
+                 * @example barcelona
+                 */
+                q: components["parameters"]["SearchQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Match search results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapSearchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapSearchPlayers: {
+        parameters: {
+            query: {
+                /**
+                 * @description Search query.
+                 * @example barcelona
+                 */
+                q: components["parameters"]["SearchQueryParam"];
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Player search results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapSearchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapPopularSearches: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Popular search results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapSearchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            502: components["responses"]["BadGateway"];
+            503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    sportSnapPlayer: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Display language (e.g. `en`, `tr`, `es`); affects translated
+                 *     (`*_trans`) fields.
+                 * @example en
+                 */
+                lang?: components["parameters"]["LangQueryParam"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description Player slug, e.g. `l-messi` (from player `url` values).
+                 * @example l-messi
+                 */
+                slug: components["parameters"]["PlayerSlugPathParam"];
+                /**
+                 * @description Numeric player id, e.g. `252`.
+                 * @example 252
+                 */
+                id: components["parameters"]["PlayerIdPathParam"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Player detail. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SportSnapPlayerResponse"];
                 };
             };
             400: components["responses"]["BadRequest"];

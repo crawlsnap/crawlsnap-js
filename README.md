@@ -80,7 +80,7 @@ console.log(ip.as_owner, domain.reputation);
 | `vectorSnap` | `url` · `hash` · `ip` · `domain` | reputation, detections, categories, relationships |
 | `pulseSnap`  | `url` · `hash` · `ip` · `domain` | threat-intelligence pulse (and sandbox) summary |
 | `subdoSnap`  | `scan` · `scanIter` | enumerated subdomains (paginated) |
-| `sportSnap`  | `channel` · `channelSchedule` · `match` · `countryChannels` · `dailySchedule` | live football TV listings: channels, schedules, match details |
+| `sportSnap`  | live scores · fixtures · matches · competitions · teams · channels · news · search · players (35 methods) | football (soccer) data: scores, fixtures, match detail, competitions, teams, TV channels, news, search, player profiles |
 
 ```ts
 const url    = await client.vectorSnap.url("https://example.com");
@@ -89,23 +89,40 @@ const domain = await client.vectorSnap.domain("google.com");
 
 const pulse  = await client.pulseSnap.ip("8.8.8.8");
 
-const channel  = await client.sportSnap.channel("bein-connect-turkey");
-const schedule = await client.sportSnap.channelSchedule("bein-connect-turkey");
-const match    = await client.sportSnap.match(5542814);
-const channels = await client.sportSnap.countryChannels("turkey");
-const day      = await client.sportSnap.dailySchedule("2026-07-05"); // or a Date
+const board   = await client.sportSnap.livescores();
+const fixtures = await client.sportSnap.matches("tr");           // iso_code optional
+const match   = await client.sportSnap.match(5542814);
+const comps   = await client.sportSnap.competitions();
+const league  = await client.sportSnap.competition("england", "premier-league");
+const team    = await client.sportSnap.nationalTeam("brazil");
+const channels = await client.sportSnap.channels();
+const info    = await client.sportSnap.channelInfo("bein-connect-turkey");
+const news    = await client.sportSnap.news();                    // start/iso_code optional
+const results = await client.sportSnap.searchAll("messi");
+const player  = await client.sportSnap.player("lionel-messi", 12345);
 ```
 
-Every method takes its lookup value as the first argument and an optional
+Every method takes its lookup value(s) as leading arguments and an optional
 per-call options object (`{ signal, timeout, maxRetries, rawResponse }`).
 
-`sportSnap` covers live football (soccer) TV listings: TV channel metadata and
-broadcast rights, channel broadcast schedules, match details with per-country
-broadcast coverage (score, events, statistics, and lineups for finished
-matches), country channel directories, and daily schedules grouped by
-competition. `match.status` is `scheduled`, `live`, or `finished` and
-discriminates how much of the payload is populated. Match ids are discovered
-via `dailySchedule` and `channelSchedule` entries.
+`sportSnap` covers the full football (soccer) data surface — live scores with
+in-match events, fixture lists (`matches`, `matchesExtended`), single-match
+views (`match`, `matchExtended`, `matchStats`, `matchCommentaries`,
+`matchChannels`, `matchExtraBroadcasts`), the competition catalog and detail
+(`competitions`, `competition`, `competitionTables`, `competitionTvRights`,
+`competitionTwitter`), national and club teams (`popularTeams`, `allTeams`,
+`nationalTeam`, `clubTeam`), TV channel directories and schedules
+(`allChannels`, `channels`, `channelInfo`, `channelRepeats`), the news feed
+(`news`, `newsByTag`, `newsArticle`, `competitionNews`, `nationalTeamNews`,
+`clubTeamNews`), full-text search (`searchAll`, `searchTeams`,
+`searchCompetitions`, `searchMatches`, `searchPlayers`, `popularSearches`), and
+player profiles (`player`).
+
+Path segments (competition `country`/`slug`, team `country`/`team`, player
+`slug`/`id`) come from the `url` fields in list, search, and detail payloads.
+`isoCode` is a two-letter region code that resolves region-specific broadcast
+channels — omit it (or pass `""`) to use the server default; `start` paginates
+news feeds (omit or `0` for the first page).
 
 ## API versioning
 

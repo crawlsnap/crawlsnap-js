@@ -62,75 +62,88 @@ function makeFetch() {
       }
       return ok({ hash_id: "h", search_type: "domain", subdomains: [{ subdomain: "b.example.com" }], cursor: "", count: 2 });
     }
-    if (path === "/v1/sport-snap/channels/bein-connect-turkey") {
+    if (path === "/v1/sport-snap/livescores") {
       return ok({
-        slug: "bein-connect-turkey",
-        name: "beIN CONNECT Turkey",
-        country: "Turkey",
-        broadcast_rights: [{ competition: "England - Premier League", year_start: 2024, year_end: 2027 }],
-        updated_at: "2026-07-05T10:00:00Z",
+        sport: "soccer",
+        updated: "2026-07-05 15:04:05",
+        matches: [{ id: "5542814", game: "Brazil 1 - 0 Norway", result: "1 - 0", status: "45", events: [] }],
       });
     }
-    if (path === "/v1/sport-snap/channels/bein-connect-turkey/schedule") {
+    if (path === "/v1/sport-snap/matches") {
       return ok({
-        slug: "bein-connect-turkey",
-        name: "beIN CONNECT Turkey",
-        entries: [{
-          date: "2026-07-06",
-          kickoff_utc: "2026-07-06T19:00:00Z",
-          match_id: 5542814,
-          match_title: "Brazil vs Norway",
-          competition: "Friendly",
-          is_placeholder: false,
-          kickoff_local: "10:00pm",
-          kickoff_raw: "10:00pm",
-        }],
-        updated_at: "2026-07-05T10:00:00Z",
-      });
-    }
-    if (path === "/v1/sport-snap/matches/5542814") {
-      return ok({
-        id: 5542814,
-        status: "finished",
-        is_placeholder: false,
-        competition: { name: "Friendly" },
-        home_team: { name: "Brazil" },
-        away_team: { name: "Norway" },
-        score: { home: 2, away: 1 },
-        events: [],
-        stats: [],
-        broadcasts: [{
-          country: "Turkey",
-          country_slug: "turkey",
-          channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey" }],
-        }],
-        updated_at: "2026-07-05T10:00:00Z",
-      });
-    }
-    if (path === "/v1/sport-snap/matches/404") return err(404, "Unknown match id");
-    if (path === "/v1/sport-snap/countries/turkey/channels") {
-      return ok({
-        country: "Turkey",
-        country_slug: "turkey",
-        channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey", last_seen: "2026-07-05T10:00:00Z" }],
-        updated_at: "2026-07-05T10:00:00Z",
-      });
-    }
-    if (path === "/v1/sport-snap/schedules/2026-07-05") {
-      return ok({
-        date: "2026-07-05",
         competitions: [{
           competition: "Friendly",
-          matches: [{
-            id: 5542814,
-            title: "Brazil vs Norway",
-            status: "scheduled",
-            is_placeholder: false,
-            kickoff_utc: "2026-07-06T19:00:00Z",
-            channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey" }],
-          }],
+          competition_url: "/competitions/world/friendly",
+          fixtures: [{ fixture_id: "5542814", game: "Norway vs England", channels: [{ slug: "bein-connect-turkey", name: "beIN" }] }],
         }],
-        updated_at: "2026-07-05T10:00:00Z",
+      });
+    }
+    if (path === "/v1/sport-snap/match/5542814") {
+      return ok({
+        competition: { competition: "Friendly", country: "World", url: "/competitions/world/friendly" },
+        fixture: {
+          fixture_id: "5542814",
+          game: "Brazil vs Norway",
+          status: "FT",
+          result: "Y",
+          team1_name: "Brazil",
+          team2_name: "Norway",
+          team1_result: "2",
+          team2_result: "1",
+          channels: [{ slug: "bein-connect-turkey", name: "beIN CONNECT Turkey" }],
+        },
+      });
+    }
+    if (path === "/v1/sport-snap/match/404") return err(404, "Unknown match id");
+    if (path === "/v1/sport-snap/competitions") {
+      return ok({
+        competitions: {
+          comp_popular: [{ name: "Premier League", slug: "premier-league", country: "England" }],
+          comp_club_domestic: [{ country: "England", competitions: [{ name: "Premier League", slug: "premier-league" }] }],
+        },
+      });
+    }
+    if (path === "/v1/sport-snap/competitions/england/premier-league") {
+      return ok({
+        competition: { competition: "Premier League", country: "England", slug: "premier-league" },
+        fixtures: [{ fixture_id: "1", game: "A vs B" }],
+        tables: [],
+      });
+    }
+    if (path === "/v1/sport-snap/countries/brazil") {
+      return ok({
+        team: { title: "Brazil", nat_team: "Y", slug: "brazil" },
+        squad: [{ name: "Player One", url: "/player/player-one/1" }],
+      });
+    }
+    if (path === "/v1/sport-snap/channels") {
+      return ok({
+        country: { name: "Turkey" },
+        channels: [{ name: "beIN CONNECT Turkey", slug: "bein-connect-turkey", platform: "Stream" }],
+      });
+    }
+    if (path === "/v1/sport-snap/channels/bein-connect-turkey/info") {
+      return ok({
+        channel: { slug: "bein-connect-turkey", name: "beIN CONNECT Turkey", platform: "Stream", coverage: "Turkey" },
+        tv_rights: [{ name: "Premier League", slug: "premier-league" }],
+      });
+    }
+    if (path === "/v1/sport-snap/news") {
+      return ok({
+        articles: [{ article_id: "42", title: "Transfer news", slug: "transfer-news", source: "Reporter" }],
+        news_lang: "en",
+      });
+    }
+    if (path === "/v1/sport-snap/search/all") {
+      return ok({
+        results: [{ type: "team", url: "/countries/brazil", title: "Brazil" }],
+      });
+    }
+    if (path === "/v1/sport-snap/player/player-one/1") {
+      return ok({
+        profile: { id: "1", slug: "player-one", name: "Player One", position: "F" },
+        team: { name: "Brazil", url: "/teams/brazil/selecao" },
+        stats: { club_stats: [{ season: "2025/2026", goals: "12" }] },
       });
     }
     return jsonResponse(500, { data: null, is_success: false, message: `unexpected ${path}`, response_code: 500 });
@@ -244,33 +257,42 @@ describe("CrawlSnap facade", () => {
 });
 
 describe("SportSnap", () => {
-  it("returns typed channel data", async () => {
+  it("returns live scores", async () => {
     const { client } = makeClient();
-    const ch = await client.sportSnap.channel("bein-connect-turkey");
-    expect(ch.slug).toBe("bein-connect-turkey");
-    expect(ch.broadcast_rights[0]?.competition).toBe("England - Premier League");
-    expect(ch.broadcast_rights[0]?.year_end).toBe(2027);
+    const board = await client.sportSnap.livescores();
+    expect(board.sport).toBe("soccer");
+    expect(board.matches[0]?.id).toBe("5542814");
+    expect(board.matches[0]?.result).toBe("1 - 0");
   });
 
-  it("returns a channel schedule with match ids", async () => {
+  it("returns fixtures grouped by competition", async () => {
     const { client } = makeClient();
-    const sched = await client.sportSnap.channelSchedule("bein-connect-turkey");
-    expect(sched.entries).toHaveLength(1);
-    expect(sched.entries[0]?.match_id).toBe(5542814);
-    expect(sched.entries[0]?.match_title).toBe("Brazil vs Norway");
-    expect(sched.entries[0]?.is_placeholder).toBe(false);
-    expect(sched.entries[0]?.kickoff_local).toBe("10:00pm");
-    expect(sched.entries[0]?.kickoff_raw).toBe("10:00pm");
+    const fixtures = await client.sportSnap.matches();
+    expect(fixtures.competitions[0]?.competition).toBe("Friendly");
+    expect(fixtures.competitions[0]?.fixtures?.[0]?.fixture_id).toBe("5542814");
   });
 
-  it("returns match details with score and broadcasts", async () => {
+  it("omits iso_code when not provided and sends it when set", async () => {
+    let seen: string | null = null;
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = new URL(typeof input === "string" ? input : input.toString());
+      seen = url.searchParams.get("iso_code");
+      return ok({ competitions: [] });
+    };
+    const client = new CrawlSnap({ apiKey: "sk-cs-test", fetch: fetchImpl });
+    await client.sportSnap.matches();
+    expect(seen).toBeNull();
+    await client.sportSnap.matches("tr");
+    expect(seen).toBe("tr");
+  });
+
+  it("returns a single match view with fixture detail", async () => {
     const { client } = makeClient();
     const match = await client.sportSnap.match(5542814);
-    expect(match.status).toBe("finished");
-    expect(match.score?.home).toBe(2);
-    expect(match.score?.away).toBe(1);
-    expect(match.broadcasts[0]?.country_slug).toBe("turkey");
-    expect(match.broadcasts[0]?.channels[0]?.slug).toBe("bein-connect-turkey");
+    expect(match.fixture.status).toBe("FT");
+    expect(match.fixture.team1_name).toBe("Brazil");
+    expect(match.fixture.channels?.[0]?.slug).toBe("bein-connect-turkey");
+    expect(match.competition.competition).toBe("Friendly");
   });
 
   it("throws NotFoundError for an unknown match id", async () => {
@@ -278,25 +300,65 @@ describe("SportSnap", () => {
     await expect(client.sportSnap.match(404)).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it("returns country channels", async () => {
+  it("returns the competition catalog", async () => {
     const { client } = makeClient();
-    const cc = await client.sportSnap.countryChannels("turkey");
-    expect(cc.country).toBe("Turkey");
-    expect(cc.channels[0]?.slug).toBe("bein-connect-turkey");
+    const comps = await client.sportSnap.competitions();
+    expect(comps.competitions.comp_popular?.[0]?.slug).toBe("premier-league");
   });
 
-  it("accepts a Date for dailySchedule and formats it as YYYY-MM-DD (UTC)", async () => {
+  it("returns competition detail by country/slug", async () => {
     const { client } = makeClient();
-    const viaDate = await client.sportSnap.dailySchedule(new Date("2026-07-05T15:04:05Z"));
-    expect(viaDate.competitions[0]?.competition).toBe("Friendly");
-    const viaString = await client.sportSnap.dailySchedule("2026-07-05");
-    expect(viaString.competitions[0]?.matches[0]?.title).toBe("Brazil vs Norway");
+    const comp = await client.sportSnap.competition("england", "premier-league");
+    expect(comp.competition.competition).toBe("Premier League");
+    expect(comp.fixtures?.[0]?.game).toBe("A vs B");
+  });
+
+  it("returns a national team view", async () => {
+    const { client } = makeClient();
+    const team = await client.sportSnap.nationalTeam("brazil");
+    expect(team.team.title).toBe("Brazil");
+    expect(team.squad?.[0]?.name).toBe("Player One");
+  });
+
+  it("returns the curated channel list", async () => {
+    const { client } = makeClient();
+    const chans = await client.sportSnap.channels();
+    expect(chans.country?.name).toBe("Turkey");
+    expect(chans.channels[0]?.slug).toBe("bein-connect-turkey");
+  });
+
+  it("returns channel info with tv rights", async () => {
+    const { client } = makeClient();
+    const info = await client.sportSnap.channelInfo("bein-connect-turkey");
+    expect(info.channel.name).toBe("beIN CONNECT Turkey");
+    expect(info.tv_rights?.[0]?.name).toBe("Premier League");
+  });
+
+  it("returns the news feed", async () => {
+    const { client } = makeClient();
+    const news = await client.sportSnap.news();
+    expect(news.articles[0]?.article_id).toBe("42");
+    expect(news.articles[0]?.title).toBe("Transfer news");
+  });
+
+  it("runs full-text search", async () => {
+    const { client } = makeClient();
+    const results = await client.sportSnap.searchAll("brazil");
+    expect(results.results[0]?.type).toBe("team");
+    expect(results.results[0]?.url).toBe("/countries/brazil");
+  });
+
+  it("returns a player profile with stats", async () => {
+    const { client } = makeClient();
+    const p = await client.sportSnap.player("player-one", 1);
+    expect(p.profile.name).toBe("Player One");
+    expect(p.stats?.club_stats?.[0]?.goals).toBe("12");
   });
 
   it("pins v1 and caches the pinned instance", async () => {
     const { client } = makeClient();
     expect(client.sportSnap.v1).toBe(client.sportSnap.v1);
-    const ch = await client.sportSnap.v1.channel("bein-connect-turkey");
-    expect(ch.slug).toBe("bein-connect-turkey");
+    const board = await client.sportSnap.v1.livescores();
+    expect(board.sport).toBe("soccer");
   });
 });
