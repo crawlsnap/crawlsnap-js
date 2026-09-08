@@ -1,6 +1,6 @@
 /**
  * Resource groups exposed on the client: `vectorSnap`, `pulseSnap`, `subdoSnap`,
- * `sportSnap`. Each method submits one lookup and resolves to the typed payload
+ * `sportSnap`, `serpApi`. Each method submits one lookup and resolves to the typed payload
  * (the unwrapped `data`), or throws a typed error.
  *
  * Per-API versioning (the version is data, not a class hierarchy)
@@ -53,6 +53,7 @@ import type {
   PulseUrlScanData,
   RawResponse,
   SearchData,
+  SerpSearchData,
   Subdomain,
   SubdoSnapScanData,
   TeamDetailData,
@@ -775,6 +776,86 @@ export class SportSnap extends Resource {
       `/player/${encodeURIComponent(slug)}/${Math.trunc(id)}`,
       {},
       opts,
+    );
+  }
+}
+
+// --------------------------------------------------------------------------
+// SerpApi — Google search results.
+// --------------------------------------------------------------------------
+
+/**
+ * Refinements for {@link SerpApi.search}. Every field is optional and an
+ * omitted field is left out of the request entirely, so the API's own default
+ * applies — the SDK does not pin a default the API is free to move.
+ */
+export interface SerpSearchOptions {
+  /**
+   * Caps the results returned from the page you asked for; it does not fetch
+   * more of them. Ask for the next `page` instead. 1-50.
+   */
+  count?: number;
+  /** Result page; page 2 starts at result 11. 1-10. */
+  page?: number;
+  /** Interface language as a two-letter code, e.g. `"en"`. */
+  language?: string;
+  /** Country to bias results towards, as a two-letter code, e.g. `"us"`. */
+  country?: string;
+  /** Enable SafeSearch filtering. */
+  safe?: boolean;
+  /** Restrict results by recency. */
+  timeRange?: "day" | "week" | "month" | "year";
+  /** Restrict results to a single domain, subdomains included. */
+  site?: string;
+  /** Restrict results to one file type, e.g. `"pdf"`. */
+  filetype?: string;
+}
+
+/** Query values for a search, omitting every refinement left undefined. */
+function serpParams(q: string, o: SerpSearchOptions): Record<string, unknown> {
+  const params: Record<string, unknown> = { q };
+  if (o.count !== undefined) params.count = o.count;
+  if (o.page !== undefined) params.page = o.page;
+  if (o.language !== undefined) params.language = o.language;
+  if (o.country !== undefined) params.country = o.country;
+  if (o.safe !== undefined) params.safe = o.safe;
+  if (o.timeRange !== undefined) params.time_range = o.timeRange;
+  if (o.site !== undefined) params.site = o.site;
+  if (o.filetype !== undefined) params.filetype = o.filetype;
+  return params;
+}
+
+/**
+ * Google search results. A direct call uses the stable default API version;
+ * pin explicitly with `.v1`.
+ */
+export class SerpApi extends Resource {
+  /** Pin this product explicitly to v1; other products are unaffected. */
+  get v1(): SerpApi {
+    return this.pinned("v1");
+  }
+
+  /**
+   * Run one Google search and resolve to the organic results of a single
+   * result page, ranked, plus the related searches Google suggests.
+   *
+   * Each result's `url` is the real target URL, already unwrapped from
+   * Google's redirector.
+   *
+   * One call returns one page of about ten results — raise `page` rather than
+   * `count`, which only caps what is parsed out of the page you asked for.
+   */
+  search(q: string, opts?: DataOptions & SerpSearchOptions): Promise<SerpSearchData>;
+  search(q: string, opts: RawOptions & SerpSearchOptions): Promise<RawResponse<SerpSearchData>>;
+  search(
+    q: string,
+    opts: RequestOptions & SerpSearchOptions = {},
+  ): Promise<SerpSearchData | RawResponse<SerpSearchData>> {
+    const { count, page, language, country, safe, timeRange, site, filetype, ...rest } = opts;
+    return this.client.request<SerpSearchData>(
+      `/${this.version}/serp/search`,
+      serpParams(q, { count, page, language, country, safe, timeRange, site, filetype }),
+      rest,
     );
   }
 }

@@ -34,7 +34,7 @@ function err(status: number, message: string): Response {
 }
 
 function makeFetch() {
-  const state = { urlCalls: 0 };
+  const state: { urlCalls: number; serpParams: Record<string, string> } = { urlCalls: 0, serpParams: {} };
   const fetchImpl: typeof fetch = async (input) => {
     const url = new URL(typeof input === "string" ? input : input.toString());
     const path = url.pathname;
@@ -137,6 +137,23 @@ function makeFetch() {
     if (path === "/v1/sport-snap/search/all") {
       return ok({
         results: [{ type: "team", url: "/countries/brazil", title: "Brazil" }],
+      });
+    }
+    if (path === "/v1/serp/search") {
+      state.serpParams = Object.fromEntries(url.searchParams);
+      return ok({
+        query: url.searchParams.get("q"),
+        page: 1,
+        engine: "google",
+        results: [{
+          rank: 1,
+          title: "Operator pattern - Kubernetes",
+          url: "https://kubernetes.io/docs/concepts/extend-kubernetes/operator/",
+          domain: "kubernetes.io",
+          snippet: "Operators are software extensions to Kubernetes ...",
+        }],
+        suggestions: ["kubernetes operator sdk"],
+        elapsed_ms: 912,
       });
     }
     if (path === "/v1/sport-snap/player/player-one/1") {
@@ -360,5 +377,51 @@ describe("SportSnap", () => {
     expect(client.sportSnap.v1).toBe(client.sportSnap.v1);
     const board = await client.sportSnap.v1.livescores();
     expect(board.sport).toBe("soccer");
+  });
+});
+
+describe("SerpApi", () => {
+  it("returns ranked results with real target URLs", async () => {
+    const { client, state } = makeClient();
+    const page = await client.serpApi.search("kubernetes operator");
+    expect(page.engine).toBe("google");
+    expect(page.results?.[0]?.rank).toBe(1);
+    expect(page.results?.[0]?.domain).toBe("kubernetes.io");
+    // The target URL is real, never a search-engine redirector.
+    expect(page.results?.[0]?.url).toMatch(/^https:\/\/kubernetes\.io\//);
+    expect(page.suggestions).toEqual(["kubernetes operator sdk"]);
+    // Unset refinements are omitted so the API's own defaults apply.
+    expect(state.serpParams).toEqual({ q: "kubernetes operator" });
+  });
+
+  it("sends every refinement it is given", async () => {
+    const { client, state } = makeClient();
+    await client.serpApi.search("actions", {
+      count: 20,
+      page: 2,
+      language: "de",
+      country: "de",
+      safe: true,
+      timeRange: "month",
+      site: "github.com",
+      filetype: "pdf",
+    });
+    expect(state.serpParams).toEqual({
+      q: "actions",
+      count: "20",
+      page: "2",
+      language: "de",
+      country: "de",
+      safe: "true",
+      time_range: "month",
+      site: "github.com",
+      filetype: "pdf",
+    });
+  });
+
+  it("pins v1 and caches the pinned instance", async () => {
+    const { client } = makeClient();
+    expect(client.serpApi.v1).toBe(client.serpApi.v1);
+    expect(await client.serpApi.v1.search("go generics")).toBeTruthy();
   });
 });

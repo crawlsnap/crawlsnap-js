@@ -17,7 +17,8 @@
  */
 export { CrawlSnap } from "./client";
 export type { CrawlSnapOptions, RequestOptions } from "./client";
-export { VectorSnap, PulseSnap, SubdoSnap, SportSnap } from "./resources";
+export { VectorSnap, PulseSnap, SubdoSnap, SportSnap, SerpApi } from "./resources";
+export type { SerpSearchOptions } from "./resources";
 export { VERSION } from "./version";
 
 export {
@@ -64,4 +65,6 @@ export type {
   NewsDetailData,
   SearchData,
   PlayerData,
+  SerpSearchData,
+  SerpResult,
 } from "./types";

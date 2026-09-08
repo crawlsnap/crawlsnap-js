@@ -48,6 +48,11 @@ export type NewsDetailData = Schemas["NewsDetailData"];
 export type SearchData = Schemas["SearchData"];
 export type PlayerData = Schemas["PlayerData"];
 
+// SerpApi — search-result payloads.
+export type SerpSearchData = Schemas["SerpSearchData"];
+/** A single organic search result, as carried by `SerpSearchData.results`. */
+export type SerpResult = Schemas["SerpResult"];
+
 /** The response envelope, as returned when a call is made with `rawResponse: true`. */
 export interface RawResponse<T = unknown> {
   statusCode: number;

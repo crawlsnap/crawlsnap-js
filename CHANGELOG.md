@@ -16,6 +16,27 @@ Releases before 0.5.0 are not listed here; see the
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-08
+
+Contract: `crawlsnap-contracts` v0.12.0
+
+### Added
+
+- **SerpApi** — new `client.serpApi` resource with a single method,
+  `search(q, opts?)`, resolving to the typed `SerpSearchData`: ranked Google
+  results for one result page plus the related searches Google suggests. Each
+  result's `url` is the real target URL, already unwrapped from Google's
+  redirector.
+
+  Refinements (`count`, `page`, `language`, `country`, `safe`, `timeRange`,
+  `site`, `filetype`) ride the same per-call options object as `signal` /
+  `timeout` / `rawResponse`. Anything left undefined is omitted from the
+  request so the API's own default applies — the SDK does not pin a default the
+  API is free to move. `serpApi.v1` pins the version, like every other
+  resource.
+
+  New exported types: `SerpSearchData`, `SerpResult`, `SerpSearchOptions`.
+
 ## [0.5.0] - 2026-07-12
 
 Contract: `crawlsnap-contracts` v0.10.0

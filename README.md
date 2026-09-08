@@ -81,6 +81,7 @@ console.log(ip.as_owner, domain.reputation);
 | `pulseSnap`  | `url` · `hash` · `ip` · `domain` | threat-intelligence pulse (and sandbox) summary |
 | `subdoSnap`  | `scan` · `scanIter` | enumerated subdomains (paginated) |
 | `sportSnap`  | live scores · fixtures · matches · competitions · teams · channels · news · search · players (35 methods) | football (soccer) data: scores, fixtures, match detail, competitions, teams, TV channels, news, search, player profiles |
+| `serpApi`    | `search` | ranked Google search results with real target URLs, plus related searches |
 
 ```ts
 const url    = await client.vectorSnap.url("https://example.com");
@@ -100,6 +101,9 @@ const info    = await client.sportSnap.channelInfo("bein-connect-turkey");
 const news    = await client.sportSnap.news();                    // start/iso_code optional
 const results = await client.sportSnap.searchAll("messi");
 const player  = await client.sportSnap.player("lionel-messi", 12345);
+
+const serp    = await client.serpApi.search("kubernetes operator");
+for (const hit of serp.results ?? []) console.log(hit.rank, hit.domain, hit.url);
 ```
 
 Every method takes its lookup value(s) as leading arguments and an optional
@@ -117,6 +121,26 @@ views (`match`, `matchExtended`, `matchStats`, `matchCommentaries`,
 `clubTeamNews`), full-text search (`searchAll`, `searchTeams`,
 `searchCompetitions`, `searchMatches`, `searchPlayers`, `popularSearches`), and
 player profiles (`player`).
+
+`serpApi.search` runs one Google search and resolves to a single result page:
+ranked organic results plus the related searches Google suggests. Each result's
+`url` is the real target URL — never a search-engine redirector — so you can
+follow or store it directly. Refine with `count`, `page`, `language`,
+`country`, `safe`, `timeRange`, `site` and `filetype` on the same options
+object; anything you leave out keeps the API's own default. One call is one
+page of about ten results, so raise `page` rather than `count` — `count` only
+caps what is parsed out of the page you asked for.
+
+```ts
+const page = await client.serpApi.search("actions", {
+  site: "github.com",
+  timeRange: "month",
+  count: 20,
+});
+for (const hit of page.results ?? []) {
+  console.log(`${hit.rank}. ${hit.title} — ${hit.url}`);
+}
+```
 
 Path segments (competition `country`/`slug`, team `country`/`team`, player
 `slug`/`id`) come from the `url` fields in list, search, and detail payloads.

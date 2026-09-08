@@ -649,8 +649,11 @@ export interface paths {
         };
         /**
          * TV channel broadcast schedule.
-         * @description Returns the channel's repeat/upcoming broadcast schedule with paging
-         *     cursors. An empty `fixtures` array is a valid 200, not a 404.
+         * @description Returns one page (~20 fixtures) of the channel's repeat/upcoming
+         *     broadcast schedule around the current date. `fixtures_next` /
+         *     `fixtures_prev` are opaque paging cursors — pass one back as
+         *     `cursor` to walk forward or backward; `null` means no further page.
+         *     An empty `fixtures` array is a valid 200, not a 404.
          */
         get: operations["sportSnapChannelRepeats"];
         put?: never;
@@ -928,6 +931,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/serp/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ranked Google search results for a query.
+         * @description Runs one Google search and returns the organic results of a single
+         *     result page, ranked, together with the related searches Google
+         *     suggests.
+         *
+         *     `url` is the real target URL, already unwrapped from Google's
+         *     redirector — you never have to follow a `google.com` hop to learn
+         *     where a result points.
+         *
+         *     One call returns one page. A page carries about ten results, so ask
+         *     for `page=2` rather than a larger `count`: `count` caps the results
+         *     parsed out of the page you requested, it does not fetch more of them.
+         */
+        get: operations["serpSearch"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1049,6 +1082,71 @@ export interface components {
         };
         SportSnapPlayerResponse: components["schemas"]["BaseResponse"] & {
             data?: components["schemas"]["PlayerData"];
+        };
+        /** @description One organic search result. */
+        SerpResult: {
+            /**
+             * Format: int32
+             * @description 1-based position on the requested page.
+             * @example 1
+             */
+            rank?: number;
+            /** @example Operator pattern - Kubernetes */
+            title?: string;
+            /**
+             * @description The real target URL, already unwrapped from Google's redirector.
+             * @example https://kubernetes.io/docs/concepts/extend-kubernetes/operator/
+             */
+            url?: string;
+            /**
+             * @description Host of `url`, for grouping and filtering.
+             * @example kubernetes.io
+             */
+            domain?: string;
+            /**
+             * @description The text excerpt Google shows beneath the result.
+             * @example Operators are software extensions to Kubernetes that make use of custom resources ...
+             */
+            snippet?: string;
+        };
+        /** @description Results of a single search. */
+        SerpSearchData: {
+            /**
+             * @description The query as it was actually sent, including any `site:` or
+             *     `filetype:` operator added from the parameters.
+             * @example threat intelligence api
+             */
+            query?: string;
+            /**
+             * Format: int32
+             * @description The result page these results come from.
+             * @example 1
+             */
+            page?: number;
+            /**
+             * @description Search engine that produced the results.
+             * @example google
+             */
+            engine?: string;
+            /** @description Organic results, in rank order. */
+            results?: components["schemas"]["SerpResult"][];
+            /**
+             * @description Related searches suggested for the query.
+             * @example [
+             *       "threat intelligence feed api",
+             *       "open source threat intel api"
+             *     ]
+             */
+            suggestions?: string[];
+            /**
+             * Format: int32
+             * @description Server-side time spent producing this response.
+             * @example 912
+             */
+            elapsed_ms?: number;
+        };
+        SerpSearchResponse: components["schemas"]["BaseResponse"] & {
+            data?: components["schemas"]["SerpSearchData"];
         };
         IocUrlScanData: {
             /** @description SHA-256 of the queried URL. */
@@ -1873,7 +1971,9 @@ export interface components {
         ChannelRepeatsData: {
             channel: components["schemas"]["ChannelInfo"];
             fixtures: components["schemas"]["FixtureSummary"][];
+            /** @description Opaque cursor for the next page (pass as `cursor`); null on the last page. */
             fixtures_next?: string | null;
+            /** @description Opaque cursor for the previous page (pass as `cursor`); null on the first page. */
             fixtures_prev?: string | null;
         };
         NewsArticle: {
@@ -2105,6 +2205,12 @@ export interface components {
          */
         CursorParam: string;
         /**
+         * @description Opaque paging cursor: the verbatim `fixtures_next` or
+         *     `fixtures_prev` value from a previous response. Omit on the first
+         *     request. The region always comes from `iso_code`.
+         */
+        SportSnapCursorQueryParam: string;
+        /**
          * @description Broadcast region as ISO 3166-1 alpha-2 (e.g. `US`, `TR`, `GB`).
          *     Channel lists are region-specific; a default region is used when
          *     omitted.
@@ -2186,6 +2292,46 @@ export interface components {
          * @example 574202
          */
         NewsIdPathParam: number;
+        /**
+         * @description The search query, exactly as you would type it into Google.
+         * @example threat intelligence api
+         */
+        SerpQueryParam: string;
+        /**
+         * @description Maximum number of results to return. A cap on the page you asked for,
+         *     not a fetch size — one page carries about ten results, so request a
+         *     further `page` rather than a larger `count`.
+         */
+        SerpCountParam: number;
+        /** @description Result page. Page 2 starts at result 11. */
+        SerpPageParam: number;
+        /**
+         * @description Interface language as a two-letter code (ISO 639-1).
+         * @example en
+         */
+        SerpLanguageParam: string;
+        /**
+         * @description Country to bias results towards, as a two-letter code
+         *     (ISO 3166-1 alpha-2).
+         * @example us
+         */
+        SerpCountryParam: string;
+        /** @description Enable SafeSearch filtering. */
+        SerpSafeParam: boolean;
+        /** @description Restrict results to the last day, week, month, or year. */
+        SerpTimeRangeParam: "day" | "week" | "month" | "year";
+        /**
+         * @description Restrict results to a single domain, subdomains included. Equivalent
+         *     to Google's `site:` operator.
+         * @example github.com
+         */
+        SerpSiteParam: string;
+        /**
+         * @description Restrict results to one file type. Equivalent to Google's `filetype:`
+         *     operator.
+         * @example pdf
+         */
+        SerpFileTypeParam: string;
     };
     requestBodies: never;
     headers: never;
@@ -3455,6 +3601,12 @@ export interface operations {
                  * @example en
                  */
                 lang?: components["parameters"]["LangQueryParam"];
+                /**
+                 * @description Opaque paging cursor: the verbatim `fixtures_next` or
+                 *     `fixtures_prev` value from a previous response. Omit on the first
+                 *     request. The region always comes from `iso_code`.
+                 */
+                cursor?: components["parameters"]["SportSnapCursorQueryParam"];
             };
             header?: never;
             path: {
@@ -4053,6 +4205,99 @@ export interface operations {
             500: components["responses"]["InternalServerError"];
             502: components["responses"]["BadGateway"];
             503: components["responses"]["ServiceUnavailable"];
+            504: components["responses"]["GatewayTimeout"];
+        };
+    };
+    serpSearch: {
+        parameters: {
+            query: {
+                /**
+                 * @description The search query, exactly as you would type it into Google.
+                 * @example threat intelligence api
+                 */
+                q: components["parameters"]["SerpQueryParam"];
+                /**
+                 * @description Maximum number of results to return. A cap on the page you asked for,
+                 *     not a fetch size — one page carries about ten results, so request a
+                 *     further `page` rather than a larger `count`.
+                 */
+                count?: components["parameters"]["SerpCountParam"];
+                /** @description Result page. Page 2 starts at result 11. */
+                page?: components["parameters"]["SerpPageParam"];
+                /**
+                 * @description Interface language as a two-letter code (ISO 639-1).
+                 * @example en
+                 */
+                language?: components["parameters"]["SerpLanguageParam"];
+                /**
+                 * @description Country to bias results towards, as a two-letter code
+                 *     (ISO 3166-1 alpha-2).
+                 * @example us
+                 */
+                country?: components["parameters"]["SerpCountryParam"];
+                /** @description Enable SafeSearch filtering. */
+                safe?: components["parameters"]["SerpSafeParam"];
+                /** @description Restrict results to the last day, week, month, or year. */
+                time_range?: components["parameters"]["SerpTimeRangeParam"];
+                /**
+                 * @description Restrict results to a single domain, subdomains included. Equivalent
+                 *     to Google's `site:` operator.
+                 * @example github.com
+                 */
+                site?: components["parameters"]["SerpSiteParam"];
+                /**
+                 * @description Restrict results to one file type. Equivalent to Google's `filetype:`
+                 *     operator.
+                 * @example pdf
+                 */
+                filetype?: components["parameters"]["SerpFileTypeParam"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ranked organic results for the query. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SerpSearchResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            402: components["responses"]["PaymentRequired"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalServerError"];
+            /**
+             * @description The search could not be completed upstream — the result page came
+             *     back unusable. The request is not billed.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /**
+             * @description Search capacity is temporarily exhausted. This is a CrawlSnap-side
+             *     limit, not one of yours — your quota is untouched and the request
+             *     is not billed. Retry shortly.
+             */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             504: components["responses"]["GatewayTimeout"];
         };
     };
