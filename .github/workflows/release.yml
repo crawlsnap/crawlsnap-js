@@ -33,3 +33,29 @@ jobs:
       - run: npm run build
       # No NODE_AUTH_TOKEN: auth is the OIDC token exchange (id-token: write).
       - run: npm publish --provenance --access public
+
+  # CHANGELOG.md is the single source of truth for release notes: copy the
+  # section for the tagged version into the GitHub Release body. npm renders no
+  # changelog of its own, so the Releases page is where users read them.
+  release-notes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract the tagged section from CHANGELOG.md
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::No CHANGELOG.md section found for version $VERSION"
+            exit 1
+          fi
+      - name: Sync the release body
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --notes-file release-notes.md

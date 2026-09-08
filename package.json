@@ -11,6 +11,13 @@
     "security"
   ],
   "homepage": "https://crawlsnap.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/crawlsnap/crawlsnap-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/crawlsnap/crawlsnap-js/issues"
+  },
   "license": "MIT",
   "author": "CrawlSnap <support@crawlsnap.com>",
   "type": "module",
@@ -30,7 +37,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "sideEffects": false,
   "engines": {

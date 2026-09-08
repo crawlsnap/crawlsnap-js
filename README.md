@@ -277,3 +277,12 @@ npm run build
 npm run typecheck
 npm test             # vitest, mocked fetch — no network
 ```
+
+## Changelog
+
+Release notes for every published version live in
+[CHANGELOG.md](https://github.com/crawlsnap/crawlsnap-js/blob/master/CHANGELOG.md)
+and are mirrored on the
+[GitHub Releases](https://github.com/crawlsnap/crawlsnap-js/releases) page —
+npm renders only this README, so those are the two places to look.
+Each entry records the `crawlsnap-contracts` version it was generated from.
